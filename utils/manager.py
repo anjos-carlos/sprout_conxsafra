@@ -2,35 +2,30 @@ import csv
 import os
 from dataclasses import asdict, fields
 from typing import List, Type
-from models import Agencia, Kit, EstoqueItem, Usuario, Colaborador
+from .models import Agencia, Kit, EstoqueItem, Usuario, Colaborador
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# Funções utilitárias para trabalhar com CSV e objetos dataclass
+# Funções de apoio
 
 def read_csv(file_name):
     path = os.path.join(DATA_DIR, file_name)
-    if not os.path.exists(path):
-        return []
     data = []
-    with open(path, mode="r", newline="", encoding="utf-8") as f:
+    with open(path, mode="r", newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
             data.append(row)
     return data
 
-def write_csv(file_name, data):
-    if not data:
-        return
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
+def write_csv(file_name, data, modelo):
     path = os.path.join(DATA_DIR, file_name)
-    with open(path, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=data[0].keys())
+    fieldnames = [f.name for f in fields(modelo)]
+    with open(path, mode="w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(data)
 
-# Conversores entre CSV e objetos
 def dicts_to_objects(data: List[dict], modelo: Type):
     objs = []
     for d in data:
@@ -41,21 +36,19 @@ def dicts_to_objects(data: List[dict], modelo: Type):
 def objects_to_dicts(objs: List):
     return [asdict(o) for o in objs]
 
-# Função genérica de listagem
+# Funções do sistema
 def listar_registros(nome_arquivo: str, modelo: Type) -> List:
     return dicts_to_objects(read_csv(nome_arquivo), modelo)
 
-# Verificar quantidade de atributos de um modelo
 def verificar_campos(modelo: Type, dados: dict) -> bool:
     modelo_fields = [f.name for f in fields(modelo)]
     preenchidos = [k for k, v in dados.items() if v is not None and v != ""]
     return len(preenchidos) <= len(modelo_fields)
 
-# Operações CRUD
 def adicionar_registro(file_name, obj):
     dados = read_csv(file_name)
     dados.append(asdict(obj))
-    write_csv(file_name, dados)
+    write_csv(file_name, dados, type(obj))
 
 def atualizar_registro(file_name, chave, valor_chave, novos_dados):
     dados = read_csv(file_name)

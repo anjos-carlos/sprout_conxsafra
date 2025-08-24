@@ -1,4 +1,4 @@
-## Sprout
+### Sprout
 
 Sistema de gestão de kits de boas-vindas para novos colaboradores.
 

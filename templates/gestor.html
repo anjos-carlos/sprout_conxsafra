@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Gestor - Gerenciar Situação dos Colaboradores</h2>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="gestorTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores" type="button">Colaboradores</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="rastrear-tab" data-bs-toggle="tab" data-bs-target="#rastrear" type="button">Rastrear Kit</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Colaboradores -->
+        <div class="tab-pane fade show active" id="colaboradores">
+            <div class="mb-3 d-flex justify-content-between">
+                <input type="text" id="pesquisaColab" class="form-control w-50" placeholder="Pesquisar colaborador...">
+                <select id="filtroSituacao" class="form-select w-25">
+                    <option value="">Todos</option>
+                    <option value="entregue">entregue</option>
+                    <option value="pendente">pendente</option>
+                    <option value="enviado">enviado</option>
+                </select>
+            </div>
+
+            <table class="table table-hover" id="tabelaColab">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Gestor</th>
+                        <th>Kit</th>
+                        <th>Tamanho</th>
+                        <th>Agência</th>
+                        <th>Situação</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in colaboradores %}
+                    <tr>
+                        <td>{{ c.id_colaborador }}</td>
+                        <td>{{ c.nome_colaborador }}</td>
+                        <td>{{ c.email_colaborador }}</td>
+                        <td>{{ c.nome_gestor }}</td>
+                        <td>{{ c.nome_kit }}</td>
+                        <td>{{ c.tamanho_camisa }}</td>
+                        <td>{{ c.nome_agencia }}</td>
+                        <td>
+                            <span class="fw-bold text-dark">{{ c.situacao }}</span>
+                        </td>
+                        <td>
+                            <!-- Botão lápis abre modal -->
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editarSituacaoModal{{c.id_colaborador}}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
+                            <!-- Modal Alterar Situação -->
+                            <div class="modal fade" id="editarSituacaoModal{{c.id_colaborador}}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form method="post" action="{{ url_for('gestor') }}">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Alterar Situação</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Alterar situação do colaborador <strong>{{c.nome_colaborador}}</strong> para:</p>
+                                                <input type="hidden" name="id_colaborador" value="{{ c.id_colaborador }}">
+                                                <select class="form-select" name="nova_situacao">
+                                                    <option value="entregue">entregue</option>
+                                                </select>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" name="nova_situacao" class="btn btn-primary">Salvar</button>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botão lixeira abre modal -->
+                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal{{c.id_colaborador}}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+
+                            <!-- Modal de Confirmação -->
+                            <div class="modal fade" id="confirmModal{{c.id_colaborador}}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirmar Exclusão</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Tem certeza que deseja excluir o colaborador <strong>{{c.nome_colaborador}}</strong>?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <form method="post">
+                                                <input type="hidden" name="id_colaborador" value="{{ c.id_colaborador }}">
+                                                <button type="submit" name="excluir_colaborador" class="btn btn-danger">Excluir</button>
+                                            </form>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Rastrear Kit -->
+        <div class="tab-pane fade" id="rastrear">
+            <div class="mb-3">
+                <select id="filtroSituacaoRastrear" class="form-select w-25">
+                    <option value="">Todos</option>
+                    <option value="entregue">entregue</option>
+                    <option value="pendente">pendente</option>
+                    <option value="enviado">enviado</option>
+                </select>
+            </div>
+
+            <table class="table table-hover" id="tabelaRastrear">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Colaborador</th>
+                        <th>Kit</th>
+                        <th>Situação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Sem dados por enquanto -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const pesquisaColab = document.getElementById("pesquisaColab");
+const filtroSituacao = document.getElementById("filtroSituacao");
+
+function filtrarColaboradores() {
+    const termo = pesquisaColab.value.toLowerCase().trim();
+    const situacaoValor = filtroSituacao.value.toLowerCase().trim();
+
+    document.querySelectorAll("#tabelaColab tbody tr").forEach(tr => {
+        const nome = tr.children[1].textContent.toLowerCase().trim(); // coluna 2: Nome
+        const situacao = tr.children[7].textContent.toLowerCase().trim(); // coluna 8: Situação
+
+        // mostra a linha se contém o nome digitado e corresponde à situação (ou se situação não filtrada)
+        tr.style.display = (nome.includes(termo) && (!situacaoValor || situacao === situacaoValor)) ? "" : "none";
+    });
+}
+
+// dispara ao digitar na pesquisa
+pesquisaColab.addEventListener("input", filtrarColaboradores);
+// dispara ao mudar o filtro de situação
+filtroSituacao.addEventListener("change", filtrarColaboradores);
+</script>
+
+
+{% endblock %}

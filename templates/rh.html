@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Painel RH</h2>
+
+    <!-- Abas -->
+    <ul class="nav nav-tabs" id="rhTabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#usuarios"
+                type="button">Usuários</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#colaboradores"
+                type="button">Colaboradores</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#estoque"
+                type="button">Estoque</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#kits"
+                type="button">Kits</button></li>
+    </ul>
+
+    <div class="tab-content mt-3">
+        <!-- Usuários -->
+        <div class="tab-pane fade show active" id="usuarios">
+            <h4 class="mb-3">Gerenciar Usuários</h4>
+            <input type="text" id="pesquisaUsuarios" class="form-control mb-3" placeholder="Pesquisar usuário...">
+            <button class="btn btn-success mb-3" data-bs-toggle="modal"
+                data-bs-target="#modalAdicionarUsuario">Adicionar</button>
+
+            <table class="table table-striped" id="tabelaUsuarios">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td>{{ u.id_usuario }}</td>
+                        <td>{{ u.nome }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalEditarUsuario{{ u.id_usuario }}">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalExcluirUsuario{{ u.id_usuario }}">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Modal Editar Usuário -->
+            {% for u in usuarios %}
+            <div class="modal fade" id="modalEditarUsuario{{ u.id_usuario }}" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <form method="post">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Editar Usuário</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    <div class="col-md-2">
+                                        <label class="form-label">ID</label>
+                                        <input name="id_usuario" class="form-control" value="{{ u.id_usuario }}"
+                                            readonly />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Login</label>
+                                        <input name="usuario" class="form-control" value="{{ u.usuario }}" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Nova Senha</label>
+                                        <input name="senha" type="password" class="form-control"
+                                            placeholder="Nova senha" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Nome</label>
+                                        <input name="nome" class="form-control" value="{{ u.nome }}" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Email</label>
+                                        <input name="email" type="email" class="form-control" value="{{ u.email }}" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Classe ID</label>
+                                        <input name="id_classe" class="form-control" value="{{ u.id_classe }}" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Classe Nome</label>
+                                        <select name="nome_classe" class="form-select" required>
+                                            <option value="" disabled>Selecione</option>
+                                            <option value="Administrador" {% if u.nome_classe=='Administrador'
+                                                %}selected{% endif %}>Administrador</option>
+                                            <option value="Almoxarifado" {% if u.nome_classe=='Almoxarifado'
+                                                %}selected{% endif %}>Almoxarifado</option>
+                                            <option value="Gestor" {% if u.nome_classe=='Gestor' %}selected{% endif %}>
+                                                Gestor</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" name="editar_usuario" class="btn btn-primary">Salvar</button>
+                                <button type="button" class="btn btn-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Modal Excluir Usuário -->
+            <div class="modal fade" id="modalExcluirUsuario{{ u.id_usuario }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirmar Exclusão</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            Tem certeza que deseja excluir <strong>{{ u.nome }}</strong>?
+                        </div>
+                        <div class="modal-footer">
+                            <form method="post" action="{{ url_for('remover_usuario') }}">
+                                <input type="hidden" name="id_usuario" value="{{ u.id_usuario }}">
+                                <button type="submit" class="btn btn-danger">Excluir</button>
+                            </form>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </div>
+
+        <!-- Colaboradores -->
+        <div class="tab-pane fade" id="colaboradores">
+            <h4 class="mb-3">Colaboradores</h4>
+            <input type="text" id="pesquisaColaboradores" class="form-control mb-3"
+                placeholder="Pesquisar colaborador...">
+
+            <table class="table table-hover" id="tabelaColaboradores">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Nome Gestor</th>
+                        <th>Email Gestor</th>
+                        <th>ID Kit</th>
+                        <th>Nome Kit</th>
+                        <th>Data Admissão</th>
+                        <th>Tamanho Camisa</th>
+                        <th>ID Agência</th>
+                        <th>Nome Agência</th>
+                        <th>Local Envio</th>
+                        <th>Situação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in colaboradores %}
+                    <tr>
+                        <td>{{ c.id_colaborador }}</td>
+                        <td>{{ c.nome_colaborador }}</td>
+                        <td>{{ c.email_colaborador }}</td>
+                        <td>{{ c.nome_gestor }}</td>
+                        <td>{{ c.email_gestor }}</td>
+                        <td>{{ c.id_kit }}</td>
+                        <td>{{ c.nome_kit }}</td>
+                        <td>{{ c.data_admissao }}</td>
+                        <td>{{ c.tamanho_camisa }}</td>
+                        <td>{{ c.id_agencia }}</td>
+                        <td>{{ c.nome_agencia }}</td>
+                        <td>{{ c.local_envio }}</td>
+                        <td><span class="text-dark fw-bold">{{ c.situacao }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Estoque -->
+        <div class="tab-pane fade" id="estoque">
+            <h4 class="mb-3">Estoque</h4>
+            <input type="text" id="pesquisaEstoque" class="form-control mb-3" placeholder="Pesquisar item...">
+
+            <table class="table table-striped" id="tabelaEstoque">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Item</th>
+                        <th>Tamanho da Camisa</th>
+                        <th>Quantidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in estoque %}
+                    <tr>
+                        <td>{{ item.id_item }}</td>
+                        <td>{{ item.item }}</td>
+                        <td>{{ item.tamanho_camisa }}</td>
+                        <td>{{ item.qntd }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Kits -->
+        <div class="tab-pane fade" id="kits">
+            <h4 class="mb-3">Kits</h4>
+            <input type="text" id="pesquisaKits" class="form-control mb-3" placeholder="Pesquisar kit...">
+
+            <table class="table table-striped" id="tabelaKits">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome Kit</th>
+                        <th>Item</th>
+                        <th>Tamanho Camisa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for k in kits %}
+                    <tr>
+                        <td>{{ k.id_kit }}</td>
+                        <td>{{ k.nome_kit }}</td>
+                        <td>{{ k.item }}</td>
+                        <td>{{ k.tamanho_camisa }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Usuário -->
+<div class="modal fade" id="modalAdicionarUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('rh') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adicionar Usuário</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">ID do Usuário</label>
+                            <input name="id_usuario" class="form-control" placeholder="Digite o ID do Usuário" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nome</label>
+                            <input name="nome" class="form-control" placeholder="Nome" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input name="email" type="email" class="form-control" placeholder="Email" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Login</label>
+                            <input name="usuario" class="form-control" placeholder="Login" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Senha</label>
+                            <input name="senha" type="password" class="form-control" placeholder="Senha" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Classe</label>
+                            <select name="nome_classe" class="form-select" required>
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Administrador">Administrador</option>
+                                <option value="Almoxarifado">Almoxarifado</option>
+                                <option value="Gestor">Gestor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">ID da Classe</label>
+                            <input name="id_classe" class="form-control" placeholder="Digite o ID da Classe" required />
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="adicionar_usuario" class="btn btn-success">Adicionar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const pesquisaMap = [
+        { id: 'pesquisaUsuarios', tabela: 'tabelaUsuarios', coluna: 1 },
+        { id: 'pesquisaColaboradores', tabela: 'tabelaColaboradores', coluna: 1 },
+        { id: 'pesquisaEstoque', tabela: 'tabelaEstoque', coluna: 1 },
+        { id: 'pesquisaKits', tabela: 'tabelaKits', coluna: 1 },
+    ];
+
+    pesquisaMap.forEach(p => {
+        document.getElementById(p.id).addEventListener('input', function () {
+            const filtro = this.value.toLowerCase();
+            document.querySelectorAll(`#${p.tabela} tbody tr`).forEach(tr => {
+                const texto = tr.children[p.coluna].textContent.toLowerCase();
+                tr.style.display = texto.includes(filtro) ? '' : 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

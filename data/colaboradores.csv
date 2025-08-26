@@ -1,8 +1,6 @@
 ﻿id_colaborador,nome_colaborador,email_colaborador,id_gestor,nome_gestor,email_gestor,id_kit,nome_kit,data_admissao,tamanho_camisa,id_agencia,nome_agencia,local_envio,situacao
-0001,Ana Silva,ana.silva@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,10/01/2023,M,1111,MATRIZ,São Paulo,enviado
-0002,Bruno Souza,bruno.souza@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,05/12/2022,G,1112,AG1112,Rio de Janeiro,entregue
-0003,Carlos Lima,carlos.lima@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,15/03/2023,P,1113,AG1113,Belo Horizonte,enviado
-0004,Daniela Pereira,daniela.pereira@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,20/06/2023,G,1114,AG1114,Curitiba,entregue
+0003,Carlos Lima,carlos.lima@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,15/03/2023,P,1113,AG1113,Belo Horizonte,entregue
+0004,Daniela Pereira,daniela.pereira@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,20/06/2023,G,1114,AG1114,Curitiba,pendente
 0005,Eduardo Alves,eduardo.alves@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0001,safrapay,30/11/2022,GG,1115,AG1115,Porto Alegre,montar
 0006,Fernanda Costa,fernanda.costa@safra.com.br,0001,Roberto Santos,roberto.santos@safra.com.br,0002,financeira,25/01/2023,P,1116,AG1116,Fortaleza,montar
 0007,Gustavo Rocha,gustavo.rocha@safra.com.br,0002,Luciana Teles,luciana.teles@safra.com.br,0002,financeira,12/10/2022,M,1117,AG1117,Recife,montar

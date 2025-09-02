@@ -1,10 +1,25 @@
 # app.py
+import threading
+import webbrowser
+import sys
+import logging
 import os
-import csv  # apenas para logs eventuais
+import csv
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from utils.manager import *   # read_csv, write_csv, listar_registros, adicionar_registro, atualizar_registro, remover_registro, validar_estoque_para_kit, ajustar_estoque_para_kit
 from utils.models import *    # Agencia, Colaborador, EstoqueItem, Kit, Usuario
 from datetime import datetime
+
+# $ alterar para puxar o utils
+# from utils import manager
+# from utils import models  
+
+# $ nas funções de adicionar, remover e alterar tem que chamar o log
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+os.environ['FLASK_ENV'] = 'production'
 
 app = Flask(__name__)
 app.secret_key = "chave_secreta_supersegura"
@@ -253,6 +268,8 @@ def login():
         return redirect(url_for("home"))
 
     return render_template("login.html")
+
+# $ retornar o nome do usuario para ser usado na função log
 
 # ---------------- HOME ----------------
 @app.route("/home")
@@ -600,6 +617,25 @@ def rh():
         class_map=class_map,
     )
 
+def run_app():
+    app.run(debug=False, use_reloader=False, port = 5000)
+
 # ---------------- RODA APLICATIVO ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    url = "http://127.0.0.1:5000/"
+    server_thread = threading.Thread(target=run_app)
+    server_thread.daemon = True
+    server_thread.start()
+    import time
+    time.sleep(1.5)
+    try:
+        webbrowser.open_new(url)
+    except Exception as e:
+        print("Não foi possível abrir o navegador automaticamente:", e)
+    print("\nAplicação iniciada em:", url)
+    print("Pressione 'q' e ENTER para encerrar.\n")
+    while True:
+        command = input()
+        if command.strip().lower() == "q":
+            print("Encerrando aplicação...")
+            sys.exit(0)

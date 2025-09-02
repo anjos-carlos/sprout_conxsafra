@@ -6,6 +6,7 @@ class Agencia:
     id_agencia: str = ""
     nome_agencia: str = ""
     local_envio: str = ""
+    prazo_dias: str = ""
 
 @dataclass
 class Kit:

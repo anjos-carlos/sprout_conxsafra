@@ -60,7 +60,7 @@ def teste_agencias():
     teste_crud(
         models.Agencia,
         "id_agencia",
-        {"id_agencia": "9999", "nome_agencia": "Agência Teste", "local_envio": "Rua X"},
+        {"id_agencia": "9999", "nome_agencia": "Agência Teste", "local_envio": "Rua X", "prazo_dias": "999"},
         {"nome_agencia": "Agência Atualizada"}
     )
 

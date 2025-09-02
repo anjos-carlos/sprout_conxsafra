@@ -1,283 +1,375 @@
-<style>
-    .situacao-entregue, .situacao-pendente, .situacao-enviado, .situacao-montar {
-        color: #000000;
-        font-weight: bold;
-    }
-</style>
-
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .situacao-entregue,
+  .situacao-pendente,
+  .situacao-enviado,
+  .situacao-montar {
+    color: #000000;
+    font-weight: bold;
+  }
+</style>
+
 <div class="container mt-4">
-    <h2 class="mb-4">Almoxarifado</h2>
+  <h2 class="mb-4">Almoxarifado</h2>
 
-    <!-- Tabs -->
-    <ul class="nav nav-tabs mb-3" id="almoxTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="estoque-tab" data-bs-toggle="tab" data-bs-target="#estoque" type="button">Estoque</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores" type="button">Colaboradores/Situação</button>
-        </li>
-    </ul>
+  <!-- Abas -->
+  <ul class="nav nav-tabs mb-3" id="almoxTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="estoque-tab" data-bs-toggle="tab" data-bs-target="#estoque" type="button">
+        Estoque
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores" type="button">
+        Colaboradores/Situação
+      </button>
+    </li>
+  </ul>
 
-    <div class="tab-content">
-        <!-- Estoque -->
-        <div class="tab-pane fade show active" id="estoque">
-            <div class="mb-3 d-flex justify-content-between">
-                <input type="text" id="pesquisaEstoque" class="form-control w-50" placeholder="Pesquisar estoque...">
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionar">Adicionar</button>
-            </div>
-            <table class="table table-hover" id="tabelaEstoque">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Item</th>
-                        <th>Tamanho da Camisa</th>
-                        <th>Quantidade</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in estoque %}
-                    <tr>
-                        <td>{{ e.id_item }}</td>
-                        <td>{{ e.item }}</td>
-                        <td>{{ e.tamanho_camisa }}</td>
-                        <td>{{ e.qntd }}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-primary btn-editar" data-bs-toggle="modal"
-                                data-bs-target="#modalEditar" data-id="{{ e.id_item }}" data-qntd="{{ e.qntd }}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger btn-remover" data-bs-toggle="modal"
-                                data-bs-target="#modalExcluir" data-id="{{ e.id_item }}" data-item="{{ e.item }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  <div class="tab-content">
+
+    <!-- ========== ESTOQUE ========== -->
+    <div class="tab-pane fade show active" id="estoque">
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-md-4">
+          <select id="estqFiltroColuna" class="form-select">
+            <option value="">Filtrar por…</option>
+            <option value="e-id">ID</option>
+            <option value="e-item">Item</option>
+            <option value="e-kit">Nome do Kit</option>
+            <option value="e-tam">Tamanho</option>
+            <option value="e-qtd">Quantidade</option>
+          </select>
         </div>
-
-        <!-- Colaboradores -->
-        <div class="tab-pane fade" id="colaboradores">
-            <div class="row mb-2">
-                <div class="col-md-6">
-                    <input type="text" id="pesquisaColab" class="form-control" placeholder="Pesquisar colaboradores...">
-                </div>
-                <div class="col-md-6">
-                    <select id="filtroSituacao" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="enviado">Enviado</option>
-                        <option value="montar">Montar</option>
-                    </select>
-                </div>
-            </div>
-
-            <table class="table table-hover" id="tabelaColab">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Kit</th>
-                        <th>Tamanho da Camisa</th>
-                        <th>Admissao</th>
-                        <th>Situação</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in colaboradores %}
-                    <tr>
-                        <td>{{ c.id_colaborador }}</td>
-                        <td>{{ c.nome_colaborador }}</td>
-                        <td>{{ c.nome_kit }}</td>
-                        <td>{{ c.tamanho_camisa }}</td>
-                        <td>{{ c.data_admissao }}</td>
-                        <td>
-                            {% set classe = "" %}
-                            {% if c.situacao == 'entregue' %}{% set classe = "situacao-entregue" %}
-                            {% elif c.situacao == 'pendente' %}{% set classe = "situacao-pendente" %}
-                            {% elif c.situacao == 'enviado' %}{% set classe = "situacao-enviado" %}
-                            {% elif c.situacao == 'montar' %}{% set classe = "situacao-montar" %}{% endif %}
-                            <span class="{{ classe }}">{{ c.situacao }}</span>
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-primary btn-editar-colab" data-bs-toggle="modal"
-                                data-bs-target="#modalEditarSituacao" data-id="{{ c.id_colaborador }}" data-situacao="{{ c.situacao }}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="col-md-5">
+          <input id="estqFiltroValor" class="form-control d-none" placeholder="Digite para filtrar…">
         </div>
-
-        <!-- Modal Adicionar Item -->
-        <div class="modal fade" id="modalAdicionar" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="{{ url_for('almoxarifado') }}">
-                        <input type="hidden" name="adicionar_estoque" value="1">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Adicionar Item</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3"><input type="text" name="id_item" class="form-control" placeholder="ID do Item" required></div>
-                            <div class="mb-3"><input type="text" name="item" class="form-control" placeholder="Nome do Item" required></div>
-                            <div class="mb-3"><input type="text" name="tamanho_camisa" class="form-control" placeholder="Tamanho da Camisa"></div>
-                            <div class="mb-3"><input type="text" name="id_kit" class="form-control" placeholder="ID do Kit" required></div>
-                            <div class="mb-3"><input type="text" name="nome_kit" class="form-control" placeholder="Nome do Kit" required></div>
-                            <div class="mb-3"><input type="number" name="qntd" class="form-control" placeholder="Quantidade" required></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-success">Adicionar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        <div class="col-md-3 text-md-end">
+          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdicionar">Adicionar</button>
         </div>
+      </div>
 
-        <!-- Modal Editar Estoque -->
-        <div class="modal fade" id="modalEditar" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="{{ url_for('almoxarifado') }}">
-                        <input type="hidden" name="alterar_estoque" value="1">
-                        <input type="hidden" name="id_item" id="editar_id_item">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Editar Item</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3"><input type="number" name="qntd" id="editar_qntd" class="form-control" placeholder="Quantidade" required></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-       <!-- Modal Excluir Item -->
-<div class="modal fade" id="modalExcluir" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Tem certeza que deseja excluir <strong id="excluirNomeItem"></strong>?
-            </div>
-            <div class="modal-footer">
-                <form method="POST" action="{{ url_for('almoxarifado') }}">
-                    <input type="hidden" name="remover_estoque" value="1">
-                    <input type="hidden" name="id_item" id="excluir_id_item">
-                    <button type="submit" class="btn btn-danger">Excluir</button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            </div>
-        </div>
+      <table class="table table-hover" id="tabelaEstoque">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Item</th>
+            <th>Nome do Kit</th>
+            <th>Tamanho da Camisa</th>
+            <th>Quantidade</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in estoque %}
+          <tr>
+            <td class="e-id">{{ e.id_item }}</td>
+            <td class="e-item">{{ e.item }}</td>
+            <td class="e-kit">{{ e.nome_kit }}</td>
+            <td class="e-tam">{{ e.tamanho_camisa }}</td>
+            <td class="e-qtd">{{ e.qntd }}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-primary btn-editar"
+                      data-bs-toggle="modal" data-bs-target="#modalEditar"
+                      data-id="{{ e.id_item }}" data-qntd="{{ e.qntd }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+
+    <!-- ========== COLABORADORES ========== -->
+    <div class="tab-pane fade" id="colaboradores">
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-md-4">
+          <select id="colabFiltroColuna" class="form-select">
+            <option value="">Filtrar por…</option>
+            <option value="c-id">ID</option>
+            <option value="c-nome">Nome</option>
+            <option value="c-kit">Kit</option>
+            <option value="c-tam">Tamanho</option>
+            <option value="c-adm">Admissão</option>
+            <option value="c-loc">Local</option>
+            <option value="c-sit">Situação</option>
+          </select>
+        </div>
+        <div class="col-md-8">
+          <input id="colabFiltroValor" class="form-control d-none" placeholder="Digite para filtrar…">
+        </div>
+      </div>
+
+      <table class="table table-hover" id="tabelaColab">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Kit</th>
+            <th>Tamanho da Camisa</th>
+            <th>Admissão</th>
+            <th>Local</th>
+            <th>Situação</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in colaboradores %}
+          <tr>
+            <td class="c-id">{{ c.id_colaborador }}</td>
+            <td class="c-nome">{{ c.nome_colaborador }}</td>
+            <td class="c-kit">{{ c.nome_kit }}</td>
+            <td class="c-tam">{{ c.tamanho_camisa }}</td>
+            <td class="c-adm">{{ c.data_admissao }}</td>
+            <td class="c-loc">{{ c.local_envio }}</td>
+            <td class="c-sit">
+              {% set classe = "" %}
+              {% if c.situacao == 'entregue' %}{% set classe = "situacao-entregue" %}
+              {% elif c.situacao == 'pendente' %}{% set classe = "situacao-pendente" %}
+              {% elif c.situacao == 'enviado' %}{% set classe = "situacao-enviado" %}
+              {% elif c.situacao == 'montar' %}{% set classe = "situacao-montar" %}{% endif %}
+              <span class="{{ classe }}">{{ c.situacao }}</span>
+            </td>
+            <td>
+              <button type="button" class="btn btn-sm btn-primary btn-editar-colab"
+                      data-bs-toggle="modal" data-bs-target="#modalEditarSituacao"
+                      data-id="{{ c.id_colaborador }}" data-situacao="{{ c.situacao }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
 </div>
 
+<!-- ========== MODAL ADICIONAR ITEM (selects encadeados) ========== -->
+<div class="modal fade" id="modalAdicionar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('almoxarifado') }}">
+        <input type="hidden" name="adicionar_estoque" value="1">
+        <input type="hidden" name="id_kit" id="add_id_kit">
 
-        <!-- Modal Editar Situação -->
-        <div class="modal fade" id="modalEditarSituacao" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="{{ url_for('almoxarifado') }}">
-                        <input type="hidden" name="alterar_situacao" value="1">
-                        <input type="hidden" name="id_colaborador" id="editar_colab_id">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Alterar Situação</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="editar_situacao" class="form-label">Situação</label>
-                                <select class="form-select" name="situacao" id="editar_situacao">
-                                    <option value="pendente">Pendente</option>
-                                    <option value="enviado">Enviado</option>
-                                    <option value="montar">Montar</option>
-                                    <option value="entregue">Entregue</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Salvar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        <div class="modal-header">
+          <h5 class="modal-title">Adicionar Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nome do Kit</label>
+            <select id="add_nome_kit" name="nome_kit" class="form-select" required>
+              <option value="" selected disabled>Selecione...</option>
+              {% for nome in nomes_kits_ordenados %}
+              <option value="{{ nome }}">{{ nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Item</label>
+            <select id="add_item" name="item" class="form-select" required disabled>
+              <option value="" selected disabled>Selecione o item…</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Tamanho da Camisa</label>
+            <select id="add_tamanho" name="tamanho_camisa" class="form-select" required disabled>
+              <option value="" selected disabled>Selecione o tamanho…</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Quantidade</label>
+            <input type="number" name="qntd" class="form-control" min="0" step="1" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Adicionar</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
+
+<!-- ========== MODAL EDITAR ESTOQUE (quantidade) ========== -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('almoxarifado') }}">
+        <input type="hidden" name="alterar_estoque" value="1">
+        <input type="hidden" name="id_item" id="editar_id_item">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Quantidade</label>
+            <input type="number" name="qntd" id="editar_qntd" class="form-control" min="0" step="1" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL ALTERAR SITUAÇÃO COLABORADOR ========== -->
+<div class="modal fade" id="modalEditarSituacao" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('almoxarifado') }}">
+        <input type="hidden" name="alterar_situacao" value="1">
+        <input type="hidden" name="id_colaborador" id="editar_colab_id">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Alterar Situação</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <label for="editar_situacao" class="form-label">Situação</label>
+          <select class="form-select" name="situacao" id="editar_situacao">
+            <option value="pendente">Pendente</option>
+            <option value="enviado">Enviado</option>
+            <option value="montar">Montar</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- JSON seguro com o catálogo -->
+<script id="kit-catalog-data" type="application/json">
+  {{ kit_catalog|tojson }}
+</script>
 
 <script>
-    // Colaboradores - filtro
-    const pesquisaColab = document.getElementById("pesquisaColab");
-    const filtroSituacao = document.getElementById("filtroSituacao");
-    const tabelaColab = document.getElementById("tabelaColab").querySelector("tbody");
+  // ====== Filtro genérico por coluna ======
+  function setupColumnFilter(selectId, inputId, tableBodySelector) {
+    const sel = document.getElementById(selectId);
+    const inp = document.getElementById(inputId);
+    const tbody = document.querySelector(tableBodySelector);
+    if (!sel || !inp || !tbody) return;
 
-    function filtrarColaboradores() {
-        const termo = pesquisaColab.value.toLowerCase().trim();
-        const situacaoValor = filtroSituacao.value.toLowerCase().trim();
-        tabelaColab.querySelectorAll("tr").forEach(tr => {
-            const nome = tr.children[1].textContent.toLowerCase().trim();
-            const situacao = tr.children[5].querySelector("span").textContent.toLowerCase().trim();
-            tr.style.display = (nome.includes(termo) && (!situacaoValor || situacao === situacaoValor)) ? "" : "none";
-        });
+    function apply() {
+      const cls = sel.value; // ex.: "e-kit", "c-nome"
+      const q = (inp.value || "").toLowerCase().trim();
+      tbody.querySelectorAll("tr").forEach(tr => {
+        if (!cls) { tr.style.display = ""; return; }
+        const cell = tr.querySelector("." + cls);
+        const txt = (cell ? cell.textContent : "").toLowerCase().trim();
+        tr.style.display = txt.includes(q) ? "" : "none";
+      });
     }
 
-    pesquisaColab.addEventListener("input", filtrarColaboradores);
-    filtroSituacao.addEventListener("change", filtrarColaboradores);
-
-    // Ordenação por admissão
-    let ordemAsc = true;
-    const thAdmissao = document.querySelector("#tabelaColab thead tr th:nth-child(5)");
-    thAdmissao.style.cursor = "pointer";
-    thAdmissao.addEventListener("click", () => {
-        const linhas = Array.from(tabelaColab.querySelectorAll("tr"));
-        linhas.sort((a, b) => {
-            const dataA = a.children[4].textContent.split("/").reverse().join("-");
-            const dataB = b.children[4].textContent.split("/").reverse().join("-");
-            return ordemAsc ? new Date(dataA) - new Date(dataB) : new Date(dataB) - new Date(dataA);
-        });
-        linhas.forEach(linha => tabelaColab.appendChild(linha));
-        ordemAsc = !ordemAsc;
+    sel.addEventListener("change", () => {
+      const has = !!sel.value;
+      inp.classList.toggle("d-none", !has);
+      const optText = has ? sel.options[sel.selectedIndex].textContent : "";
+      inp.placeholder = has ? `Pesquisar por ${optText.toLowerCase()}…` : "Digite para filtrar…";
+      inp.value = "";
+      apply();
+      if (has) inp.focus();
     });
 
-    // Editar estoque
-    document.querySelectorAll(".btn-editar").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.getElementById("editar_id_item").value = btn.dataset.id;
-            document.getElementById("editar_qntd").value = btn.dataset.qntd;
-        });
+    inp.addEventListener("input", apply);
+  }
+
+  // Ativa filtros
+  setupColumnFilter("estqFiltroColuna", "estqFiltroValor", "#tabelaEstoque tbody");
+  setupColumnFilter("colabFiltroColuna", "colabFiltroValor", "#tabelaColab tbody");
+
+  // ====== Preenche modal Editar Estoque ======
+  document.querySelectorAll(".btn-editar").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("editar_id_item").value = btn.dataset.id;
+      document.getElementById("editar_qntd").value = btn.dataset.qntd;
+    });
+  });
+
+  // ====== Preenche modal Editar Situação ======
+  document.querySelectorAll(".btn-editar-colab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("editar_colab_id").value = btn.dataset.id;
+      document.getElementById("editar_situacao").value = btn.dataset.situacao;
+    });
+  });
+
+  // ====== Encadeamento Kit -> Item -> Tamanho na Modal "Adicionar" ======
+  (function () {
+    const dataEl = document.getElementById('kit-catalog-data');
+    let CATALOG = {};
+    try { CATALOG = JSON.parse(dataEl.textContent); } catch (e) { console.error('Erro JSON catálogo', e); }
+
+    const selKit = document.getElementById('add_nome_kit');
+    const selItem = document.getElementById('add_item');
+    const selTam  = document.getElementById('add_tamanho');
+    const hidId   = document.getElementById('add_id_kit');
+
+    function resetSelect(sel, ph) {
+      sel.innerHTML = '';
+      const o = document.createElement('option');
+      o.value = ''; o.textContent = ph; o.disabled = true; o.selected = true;
+      sel.appendChild(o);
+      sel.disabled = true;
+    }
+    function fillSelect(sel, arr, ph) {
+      resetSelect(sel, ph);
+      arr.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.disabled = arr.length === 0;
+    }
+
+    resetSelect(selItem, 'Selecione o item…');
+    resetSelect(selTam,  'Selecione o tamanho…');
+
+    selKit?.addEventListener('change', () => {
+      const nome = selKit.value;
+      const ref = CATALOG[nome] || null;
+      hidId.value = ref ? (ref.id_kit || '') : '';
+      const itens = ref ? Object.keys(ref.items).sort((a,b)=>a.localeCompare(b)) : [];
+      fillSelect(selItem, itens, 'Selecione o item…');
+      resetSelect(selTam, 'Selecione o tamanho…');
     });
 
-    // Modal excluir
-    document.querySelectorAll(".btn-remover").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.getElementById("excluir_id_item").value = btn.dataset.id;
-            document.getElementById("excluirNomeItem").textContent = btn.dataset.item;
-        });
+    selItem?.addEventListener('change', () => {
+      const nome = selKit.value;
+      const item = selItem.value;
+      const ref  = CATALOG[nome] || {};
+      const sizes = (ref.items && ref.items[item]) ? ref.items[item] : [];
+      fillSelect(selTam, sizes, 'Selecione o tamanho…');
     });
 
-    // Modal editar colaborador
-    document.querySelectorAll(".btn-editar-colab").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.getElementById("editar_colab_id").value = btn.dataset.id;
-            document.getElementById("editar_situacao").value = btn.dataset.situacao;
-        });
+    document.getElementById('modalAdicionar')?.addEventListener('shown.bs.modal', () => {
+      selKit.value = '';
+      resetSelect(selItem, 'Selecione o item…');
+      resetSelect(selTam,  'Selecione o tamanho…');
+      hidId.value = '';
     });
+  })();
 </script>
 {% endblock %}

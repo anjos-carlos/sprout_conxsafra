@@ -2,14 +2,18 @@ import csv
 import os
 from dataclasses import asdict, fields
 from typing import List, Type
-from .models import Agencia, Kit, EstoqueItem, Usuario, Colaborador
+import getpass
 
+from datetime import datetime
+from .secure_backup import restore_data, backup_data
+from .models import Agencia, Colaborador, EstoqueItem, Kit, Usuario
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 
-# DICIONARIO PADRÃO DAS CLASSES
+# ---------------- DICIONARIO ---------------- #
+
 MODEL_FILE_MAP = {
     Agencia: "agencias.csv",
     Kit: "kits_cadastrados.csv",
@@ -19,92 +23,202 @@ MODEL_FILE_MAP = {
 }
 
 
-### FUNÇÕES DE APOIO
-def read_csv(file_name):
-    path = os.path.join(DATA_DIR, file_name)
-    data = []
-    if not os.path.exists(path):
-        return []  # se não existir, retorna lista vazia
-    with open(path, mode="r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            data.append(row)
-    return data
+# ---------------- AUXILIARES ---------------- #
 
-def write_csv(file_name, data, modelo):
-    path = os.path.join(DATA_DIR, file_name)
-    fieldnames = [f.name for f in fields(modelo)]
-    with open(path, mode="w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+def read_csv(model):
+    restore_data()
+    file = os.path.join(DATA_DIR, MODEL_FILE_MAP[model])
+    if not os.path.exists(file): return []
+    with open(file, "r", encoding="utf-8-sig", newline="") as f:
+        return list(csv.DictReader(f))
+    backup_data()
+
+
+def write_csv(model, data):
+    restore_data()
+    file = os.path.join(DATA_DIR, MODEL_FILE_MAP[model])
+    with open(file, "w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=[f.name for f in fields(model)])
         writer.writeheader()
         writer.writerows(data)
+    backup_data()
+
 
 def dicts_to_objects(data: List[dict], modelo: Type):
-    objs = []
-    for d in data:
-        clean_d = {k: (v if v != '' else None) for k, v in d.items()}
-        objs.append(modelo(**clean_d))
-    return objs
+    return [modelo({k: (v if v != "" else None) for k, v in d.items()}) for d in data]
+
 
 def objects_to_dicts(objs: List):
     return [asdict(o) for o in objs]
+
 
 def get_file_for_model(modelo: Type) -> str:
     return MODEL_FILE_MAP[modelo]
 
 
-### FUNÇÃO DE VERIFICAÇÃO
+# ---------------- LOG ---------------- #
+
+def log_action(usuario: str, resultado: dict):
+    restore_data()
+    log_file = os.path.join(DATA_DIR, "logs.csv")
+    file_exists = os.path.exists(log_file)
+    fieldnames = [
+        "usuario",
+        "data",
+        "hora",
+        "acao",
+        "linha_antes",
+        "linha_depois",
+    ]
+    now = datetime.now()
+    row = {
+        "usuario": usuario or getpass.getuser(),
+        "data": now.strftime("%Y-%m-%d"),
+        "hora": now.strftime("%H:%M:%S"),
+        "acao": resultado.get("acao", ""),
+        "linha_antes": str(resultado.get("linha_antes") or ""),
+        "linha_depois": str(resultado.get("linha_depois") or ""),
+    }
+    with open(log_file, "a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists or os.stat(log_file).st_size == 0:
+            writer.writeheader()
+        writer.writerow(row)
+    backup_data()
+
+
+# ---------------- ESTOQUE ---------------- #
+
+def alterar_estoque(id_kit: str, item_nome: str, tamanho: str, quantidade: int):
+    dados = read_csv(EstoqueItem)
+    for item in dados:
+        if (
+            item["id_kit"] == id_kit
+            and item["item"].lower() == item_nome.lower()
+            and (not "camisa" in item_nome.lower() or item["tamanho_camisa"].upper() == tamanho.upper())
+        ):
+            qntd = int(item["qntd"])
+            novo_qntd = qntd + quantidade
+            if novo_qntd < 0:
+                raise ValueError(f"Estoque insuficiente para {item_nome} ({tamanho})")
+            item["qntd"] = str(novo_qntd)
+            break
+    write_csv(EstoqueItem, dados)
+
+
+def ajustar_estoque_para_kit(id_kit: str, tamanho_camisa: str, delta: int):
+    dados = read_csv(EstoqueItem)
+    for item in dados:
+        if item["id_kit"] == id_kit:
+            nome_item = item["item"].lower()
+            tamanho_item = item.get("tamanho_camisa", "").upper()
+            qntd = int(item["qntd"])
+            if "camisa" in nome_item and tamanho_item == tamanho_camisa.upper():
+                novo_qntd = qntd + delta * 3
+            elif "camisa" not in nome_item:
+                novo_qntd = qntd + delta * 1
+            else:
+                continue
+            if novo_qntd < 0:
+                raise ValueError(f"Estoque insuficiente para item {item['item']} ({tamanho_item})")
+            item["qntd"] = str(novo_qntd)
+    write_csv(EstoqueItem, dados)
+
+
+def validar_estoque_para_kit(id_kit: str, tamanho_camisa: str) -> bool:
+    dados = read_csv(EstoqueItem)
+    itens_do_kit = [item for item in dados if item["id_kit"] == id_kit]
+    
+    camisa_ok = False
+    outros_ok = True
+
+    for item in itens_do_kit:
+        qntd = int(item["qntd"])
+        nome_item = item["item"].lower()
+        tamanho_item = item.get("tamanho_camisa", "").upper()
+
+        if "camisa" in nome_item and tamanho_item == tamanho_camisa.upper():
+            camisa_ok = qntd >= 3
+        elif "camisa" not in nome_item and qntd < 1:
+            outros_ok = False
+
+    return camisa_ok and outros_ok
+
+
+# ---------------- CRUD ---------------- #
+
 def verificar_campos(modelo: Type, dados: dict) -> bool:
     modelo_fields = [f.name for f in fields(modelo)]
-    preenchidos = [k for k, v in dados.items() if v is not None and v != ""]
+    preenchidos = [k for k, v in dados.items() if v not in (None, "")]
     return len(preenchidos) <= len(modelo_fields)
 
 
-### FUNÇÕES DO SISTEMA
 def listar_registros(modelo: Type) -> List:
-    file_name = get_file_for_model(modelo)
-    return dicts_to_objects(read_csv(file_name), modelo)
+    return dicts_to_objects(read_csv(modelo), modelo)
+
 
 def adicionar_registro(novo_registro, modelo: Type):
-    file_name = get_file_for_model(modelo)
-    dados = read_csv(file_name)
-    dados.append(asdict(novo_registro))
-    write_csv(file_name, dados, modelo)
+    dados = read_csv(modelo)
+    if modelo == Colaborador:
+        id_kit = novo_registro.id_kit
+        tamanho_camisa = novo_registro.tamanho_camisa
+        if not validar_estoque_para_kit(id_kit, tamanho_camisa):
+            raise ValueError(f"Estoque insuficiente para kit {id_kit} (camisa {tamanho_camisa})")
+        ajustar_estoque_para_kit(id_kit, tamanho_camisa, delta=-1)
+    linha_depois = asdict(novo_registro)
+    dados.append(linha_depois)
+    write_csv(modelo, dados)
+
+    return {
+        'acao': "REGISTRAR",
+        'linha_antes': None,
+        'linha_depois': linha_depois
+    }
 
 def atualizar_registro(chave, valor_chave, novos_dados, modelo: Type):
-    file_name = get_file_for_model(modelo)
-    dados = read_csv(file_name)
+    dados = read_csv(modelo)
+    linha_antes, linha_depois = None, None
     for d in dados:
         if d.get(chave) == valor_chave:
+            linha_antes = d.copy()
+            if modelo == Colaborador:
+                id_kit_antigo = d["id_kit"]
+                tamanho_antigo = d.get("tamanho_camisa", "")
+                id_kit_novo = novos_dados.get("id_kit", id_kit_antigo)
+                tamanho_novo = novos_dados.get("tamanho_camisa", tamanho_antigo)
+
+                if id_kit_novo != id_kit_antigo or tamanho_novo != tamanho_antigo:
+                    ajustar_estoque_para_kit(id_kit_antigo, tamanho_antigo, delta=+1)
+                    if not validar_estoque_para_kit(id_kit_novo, tamanho_novo):
+                        raise ValueError(f"Estoque insuficiente para kit {id_kit_novo} (camisa {tamanho_novo})")
+                    ajustar_estoque_para_kit(id_kit_novo, tamanho_novo, delta=-1)
             d.update({k: v for k, v in novos_dados.items() if v is not None})
-    write_csv(file_name, dados, modelo)
+            linha_depois = d.copy()
+            break
+    write_csv(modelo, dados)
+    return {
+        'acao': "ATUALIZAR",
+        'linha_antes': linha_antes,
+        'linha_depois': linha_depois
+    }
+
 
 def remover_registro(chave, valor_chave, modelo: Type):
-    file_name = get_file_for_model(modelo)
-    dados = read_csv(file_name)
-    dados = [d for d in dados if d.get(chave) != valor_chave]
-    write_csv(file_name, dados, modelo)
-
-def buscar_registro(chave, valor_chave, modelo: Type):
-    file_name = get_file_for_model(modelo)
-    dados = read_csv(file_name)
-    filtrados = [d for d in dados if d.get(chave) == valor_chave]
-    return dicts_to_objects(filtrados, modelo)
-
-def filtrar_registros(modelo: Type, **criterios):
-    file_name = get_file_for_model(modelo)
-    dados = read_csv(file_name)
-    filtrados = []
+    dados = read_csv(modelo)
+    novos_dados = []
+    linha_antes = None
     for d in dados:
-        if all(d.get(campo) == str(valor) for campo, valor in criterios.items()):
-            filtrados.append(d)
-    return dicts_to_objects(filtrados, modelo)
-
-def ordenar_registros(modelo: Type, chave, reverso=False):
-    objs = dicts_to_objects(read_csv(get_file_for_model(modelo)), modelo)
-    return sorted(objs, key=lambda x: getattr(x, chave) or "", reverse=reverso)
-
-def paginar_registros(registros: List, pagina=1, tamanho_pagina=10):
-    inicio = (pagina - 1) * tamanho_pagina
-    fim = inicio + tamanho_pagina
-    return registros[inicio:fim]
+        if d.get(chave) == valor_chave:
+            linha_antes = d.copy()
+            if modelo == Colaborador:
+                id_kit = d["id_kit"]
+                tamanho_camisa = d.get("tamanho_camisa", "")
+                ajustar_estoque_para_kit(id_kit, tamanho_camisa, delta=+1)
+            continue 
+        novos_dados.append(d)
+    write_csv(modelo, novos_dados)
+    return {
+        'acao': "REMOVER",
+        'linha_antes': linha_antes,
+        'linha_depois': None
+    }

@@ -1,71 +1,67 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Gestão</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-<style>
-    body { background-color: #f8f9fa; }
-    .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        transition: all 0.3s ease-in-out;
-    }
-    .card i { font-size: 2rem; }
-</style>
-</head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="#">Sistema de Gestão</a>
-        <div class="ms-auto text-white">
-            Olá, {{ usuario.nome }} | <a href="{{ url_for('logout') }}" class="text-white">Sair</a>
+{% extends "base.html" %}
+{% block title %}Início • Gerenciamento de Kits{% endblock %}
+
+{% block content %}
+  <section class="mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-pill"
+             style="background:rgba(76,175,80,.12); border:1px solid rgba(76,175,80,.25); color:#a6e0a8; font-weight:600;">
+          <i class="bi bi-check-circle-fill"></i> Logado
+          <span class="ms-2 muted">Perfil: {{ usuario.nome_classe }}</span>
         </div>
+        <h1 class="h2 mt-3 mb-1">Bem-vindo, <span class="link-accent">{{ (usuario.nome or usuario.usuario) | default('Usuário', true) }}</span></h1>
+        <p class="muted mb-0">Gerencie estoque, kits e colaboradores de forma direta.</p>
+      </div>
+
+      <img src="{{ url_for('static', filename='img/banco-safra-logo-1.png') }}"
+           alt="Safra" height="36" class="opacity-75">
     </div>
-</nav>
+  </section>
 
-<div class="container my-5">
-    <h1 class="mb-4 text-center">Bem-vindo, {{ usuario.nome }}</h1>
-    <div class="row g-4">
-        {% if usuario.nome_classe == 'Administrador' or usuario.nome_classe == 'Almoxarifado' %}
-        <div class="col-md-4">
-            <a href="/almoxarifado" class="text-decoration-none text-dark">
-                <div class="card card-hover text-center p-4">
-                    <i class="bi bi-box-seam mb-2"></i>
-                    <h5 class="card-title">Almoxarifado</h5>
-                    <p class="card-text">Gerencie estoque e kits.</p>
-                </div>
-            </a>
-        </div>
-        {% endif %}
+  {% set perfil = usuario.nome_classe or '' %}
 
-        {% if usuario.nome_classe == 'Administrador' or usuario.nome_classe == 'RH' %}
-        <div class="col-md-4">
-            <a href="/rh" class="text-decoration-none text-dark">
-                <div class="card card-hover text-center p-4">
-                    <i class="bi bi-people mb-2"></i>
-                    <h5 class="card-title">RH</h5>
-                    <p class="card-text">Gerencie colaboradores.</p>
-                </div>
-            </a>
+  <section class="row g-4">
+    {% if perfil in ['Administrador', 'Almoxarifado'] %}
+    <div class="col-12 col-md-4">
+      <a class="text-decoration-none" href="{{ url_for('almoxarifado') }}">
+        <div class="kit-card p-4 h-100">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-box-seam me-3" style="font-size:1.6rem; color:#66aaff;"></i>
+            <h5 class="mb-0 text-white">Almoxarifado</h5>
+          </div>
+          <p class="mb-0 muted">Controle de estoque e entrada de kits.</p>
         </div>
-        {% endif %}
-
-        {% if usuario.nome_classe == 'Administrador' or usuario.nome_classe == 'Gestor' %}
-        <div class="col-md-4">
-            <a href="/gestor" class="text-decoration-none text-dark">
-                <div class="card card-hover text-center p-4">
-                    <i class="bi bi-person-badge mb-2"></i>
-                    <h5 class="card-title">Gestor</h5>
-                    <p class="card-text">Acompanhe a situação e envio do Kit.</p>
-                </div>
-            </a>
-        </div>
-        {% endif %}
+      </a>
     </div>
-</div>
+    {% endif %}
 
-</body>
-</html>
+    {% if perfil in ['Administrador', 'RH'] %}
+    <div class="col-12 col-md-4">
+      <a class="text-decoration-none" href="{{ url_for('rh') }}">
+        <div class="kit-card p-4 h-100">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-people me-3" style="font-size:1.6rem; color:#66aaff;"></i>
+            <h5 class="mb-0 text-white">RH</h5>
+          </div>
+          <p class="mb-0 muted">Cadastro e manutenção de colaboradores.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
+
+    {% if perfil in ['Administrador', 'GA'] %}
+    <div class="col-12 col-md-4">
+      <a class="text-decoration-none" href="{{ url_for('gestor') }}">
+        <div class="kit-card p-4 h-100">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-person-badge me-3" style="font-size:1.6rem; color:#66aaff;"></i>
+            <h5 class="mb-0 text-white">Gerenciar Situação dos Colaboradores</h5>
+          </div>
+          <p class="mb-0 muted">Acompanhe a situação e entrega dos kits.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
+  </section>
+{% endblock %}

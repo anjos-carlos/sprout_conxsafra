@@ -12,7 +12,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 
-# ---------------- DICIONARIO ---------------- #
+# ---------------- DE PARA ARQUIVOS ---------------- #
 
 MODEL_FILE_MAP = {
     Agencia: "agencias.csv",
@@ -22,6 +22,15 @@ MODEL_FILE_MAP = {
     Colaborador: "colaboradores.csv",
 }
 
+# ---------------- PREFIXOS DE ID ---------------- #
+
+MODEL_ID_PREFIX = {
+    Agencia: "A",
+    Colaborador: "C",
+    EstoqueItem: "E",
+    Kit: "K",
+    Usuario: "U",
+}
 
 # ---------------- AUXILIARES ---------------- #
 
@@ -61,6 +70,23 @@ def objects_to_dicts(objs: List):
 
 def get_file_for_model(modelo: Type) -> str:
     return MODEL_FILE_MAP[modelo]
+
+
+def gerar_id(modelo: Type) -> str:
+    dados = read_csv(modelo)
+    chave_id = [f.name for f in fields(modelo) if f.name.startswith("id_")][0]
+    prefixo = MODEL_ID_PREFIX[modelo]
+    existentes = []
+    for d in dados:
+        valor = d.get(chave_id, "")
+        if valor.startswith(prefixo):
+            try:
+                existentes.append(int(valor[len(prefixo):]))
+            except ValueError:
+                continue
+
+    proximo = max(existentes, default=0) + 1
+    return f"{prefixo}{proximo:03d}"
 
 
 # ---------------- LOG ---------------- #
@@ -166,12 +192,16 @@ def listar_registros(modelo: Type) -> List:
 
 def adicionar_registro(novo_registro, modelo: Type):
     dados = read_csv(modelo)
+    chave_id = [f.name for f in fields(modelo) if f.name.startswith("id_")][0]
+    if not getattr(novo_registro, chave_id):
+        setattr(novo_registro, chave_id, gerar_id(modelo))
     if modelo == Colaborador:
         id_kit = novo_registro.id_kit
         tamanho_camisa = novo_registro.tamanho_camisa
         if not validar_estoque_para_kit(id_kit, tamanho_camisa):
             raise ValueError(f"Estoque insuficiente para kit {id_kit} (camisa {tamanho_camisa})")
         ajustar_estoque_para_kit(id_kit, tamanho_camisa, delta=-1)
+
     linha_depois = asdict(novo_registro)
     dados.append(linha_depois)
     write_csv(modelo, dados)
@@ -181,6 +211,7 @@ def adicionar_registro(novo_registro, modelo: Type):
         'linha_antes': None,
         'linha_depois': linha_depois
     }
+
 
 def atualizar_registro(chave, valor_chave, novos_dados, modelo: Type):
     dados = read_csv(modelo)

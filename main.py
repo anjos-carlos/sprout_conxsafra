@@ -34,9 +34,10 @@ def teste_crud(entidade, chave, dados_iniciais, dados_atualizados):
     manager.log_action(usuario_teste, resultado)
     print("Adicionado!")
     input("Continuar...")
+    
 
     # 2. Atualizar
-    valor_chave = dados_iniciais[chave]
+    valor_chave = resultado["linha_depois"][chave]
     resultado = manager.atualizar_registro(chave, valor_chave, dados_atualizados, entidade)
     manager.log_action(usuario_teste, resultado)
     print("Atualizado!")
@@ -60,7 +61,7 @@ def teste_agencias():
     teste_crud(
         models.Agencia,
         "id_agencia",
-        {"id_agencia": "9999", "nome_agencia": "Agência Teste", "local_envio": "Rua X", "prazo_dias": "999"},
+        {"nome_agencia": "Agência Teste", "local_envio": "Rua X", "prazo_dias": "999"},
         {"nome_agencia": "Agência Atualizada"}
     )
 
@@ -68,7 +69,7 @@ def teste_colaboradores():
     teste_crud(
         models.Colaborador,
         "id_colaborador",
-        {"id_colaborador": "9999", "nome_colaborador": "Maria Teste",
+        {"nome_colaborador": "Maria Teste",
          "email_colaborador": "maria@teste.com", "id_gestor": "0001",
          "id_kit": "0001", "data_admissao": "2024-01-01",
          "tamanho_camisa": "G", "id_agencia": "A001", "situacao": "Ativo"},
@@ -79,7 +80,7 @@ def teste_estoque():
     teste_crud(
         models.EstoqueItem,
         "id_item",
-        {"id_item": "0001", "item": "Camisa Azul", "tamanho_camisa": "G",
+        {"item": "Camisa Azul", "tamanho_camisa": "G",
          "id_kit": "K001", "qntd": 50},
         {"qntd": 45}
     )
@@ -88,7 +89,7 @@ def teste_kits():
     teste_crud(
         models.Kit,
         "id_kit",
-        {"id_kit": "9999", "nome_kit": "Kit Teste"},
+        {"nome_kit": "Kit Teste"},
         {"nome_kit": "Kit Atualizado"}
     )
 
@@ -96,7 +97,7 @@ def teste_usuarios():
     teste_crud(
         models.Usuario,
         "id_usuario",
-        {"id_usuario": "9999", "usuario": "teste", "senha": "1234",
+        {"usuario": "teste", "senha": "1234",
          "nome": "Usuário Teste", "email": "teste@teste.com",
          "id_classe": "1", "nome_classe": "Administrador"},
         {"email": "novo@teste.com"}

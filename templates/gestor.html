@@ -2,173 +2,196 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">Gestor - Gerenciar Situação dos Colaboradores</h2>
+  <h2 class="mb-4">Gerenciar Situação dos Colaboradores</h2>
 
-    <!-- Tabs -->
-    <ul class="nav nav-tabs mb-3" id="gestorTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores" type="button">Colaboradores</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="rastrear-tab" data-bs-toggle="tab" data-bs-target="#rastrear" type="button">Rastrear Kit</button>
-        </li>
-    </ul>
+  <!-- Abas -->
+  <ul class="nav nav-tabs mb-3" id="gestorTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores"
+        type="button">
+        Colaboradores
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="rastrear-tab" data-bs-toggle="tab" data-bs-target="#rastrear" type="button">
+        Rastrear Kit
+      </button>
+    </li>
+  </ul>
 
-    <div class="tab-content">
-        <!-- Colaboradores -->
-        <div class="tab-pane fade show active" id="colaboradores">
-            <div class="mb-3 d-flex justify-content-between">
-                <input type="text" id="pesquisaColab" class="form-control w-50" placeholder="Pesquisar colaborador...">
-                <select id="filtroSituacao" class="form-select w-25">
-                    <option value="">Todos</option>
-                    <option value="entregue">entregue</option>
-                    <option value="pendente">pendente</option>
-                    <option value="enviado">enviado</option>
-                </select>
-            </div>
-
-            <table class="table table-hover" id="tabelaColab">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Email</th>
-                        <th>Gestor</th>
-                        <th>Kit</th>
-                        <th>Tamanho</th>
-                        <th>Agência</th>
-                        <th>Situação</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in colaboradores %}
-                    <tr>
-                        <td>{{ c.id_colaborador }}</td>
-                        <td>{{ c.nome_colaborador }}</td>
-                        <td>{{ c.email_colaborador }}</td>
-                        <td>{{ c.nome_gestor }}</td>
-                        <td>{{ c.nome_kit }}</td>
-                        <td>{{ c.tamanho_camisa }}</td>
-                        <td>{{ c.nome_agencia }}</td>
-                        <td>
-                            <span class="fw-bold text-dark">{{ c.situacao }}</span>
-                        </td>
-                        <td>
-                            <!-- Botão lápis abre modal -->
-                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editarSituacaoModal{{c.id_colaborador}}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-
-                            <!-- Modal Alterar Situação -->
-                            <div class="modal fade" id="editarSituacaoModal{{c.id_colaborador}}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <form method="post" action="{{ url_for('gestor') }}">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Alterar Situação</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p>Alterar situação do colaborador <strong>{{c.nome_colaborador}}</strong> para:</p>
-                                                <input type="hidden" name="id_colaborador" value="{{ c.id_colaborador }}">
-                                                <select class="form-select" name="nova_situacao">
-                                                    <option value="entregue">entregue</option>
-                                                </select>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="submit" name="nova_situacao" class="btn btn-primary">Salvar</button>
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Botão lixeira abre modal -->
-                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal{{c.id_colaborador}}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-
-                            <!-- Modal de Confirmação -->
-                            <div class="modal fade" id="confirmModal{{c.id_colaborador}}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirmar Exclusão</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            Tem certeza que deseja excluir o colaborador <strong>{{c.nome_colaborador}}</strong>?
-                                        </div>
-                                        <div class="modal-footer">
-                                            <form method="post">
-                                                <input type="hidden" name="id_colaborador" value="{{ c.id_colaborador }}">
-                                                <button type="submit" name="excluir_colaborador" class="btn btn-danger">Excluir</button>
-                                            </form>
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  <div class="tab-content">
+    <!-- =================== COLABORADORES =================== -->
+    <div class="tab-pane fade show active" id="colaboradores">
+      <!-- Toolbar de filtro por coluna + filtro de situação -->
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-md-4">
+          <select id="gestorFiltroColuna" class="form-select">
+            <option value="">Filtrar por…</option>
+            <option value="g-id">ID</option>
+            <option value="g-nome">Nome</option>
+            <option value="g-email">Email</option>
+            <option value="g-gestor">GA</option>
+            <option value="g-kit">Kit</option>
+            <option value="g-tam">Tamanho</option>
+            <option value="g-ag">Local</option>
+            <option value="g-da">Data Admissão</option>
+            <option value="g-sit">Situação</option>
+          </select>
         </div>
-
-        <!-- Rastrear Kit -->
-        <div class="tab-pane fade" id="rastrear">
-            <div class="mb-3">
-                <select id="filtroSituacaoRastrear" class="form-select w-25">
-                    <option value="">Todos</option>
-                    <option value="entregue">entregue</option>
-                    <option value="pendente">pendente</option>
-                    <option value="enviado">enviado</option>
-                </select>
-            </div>
-
-            <table class="table table-hover" id="tabelaRastrear">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Colaborador</th>
-                        <th>Kit</th>
-                        <th>Situação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Sem dados por enquanto -->
-                </tbody>
-            </table>
+        <div class="col-md-5">
+          <input id="gestorFiltroValor" class="form-control d-none" placeholder="Digite para filtrar…">
         </div>
+        <div class="col-md-3">
+          <select id="gestorFiltroSituacao" class="form-select">
+            <option value="">Todas as situações</option>
+            <option value="entregue">entregue</option>
+            <option value="pendente">pendente</option>
+            <option value="enviado">enviado</option>
+            <option value="montar">montar</option>
+          </select>
+        </div>
+      </div>
+
+      <table class="table table-hover" id="tabelaColab">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>GA</th>
+            <th>Kit</th>
+            <th>Tamanho</th>
+            <th>Local</th>
+            <th>Data Admissão</th>
+            <th>Situação</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in colaboradores %}
+          <tr>
+            <td class="g-id">{{ c.id_colaborador }}</td>
+            <td class="g-nome">{{ c.nome_colaborador }}</td>
+            <td class="g-email">{{ c.email_colaborador }}</td>
+            <td class="g-gestor">{{ c.nome_gestor }}</td>
+            <td class="g-kit">{{ c.nome_kit }}</td>
+            <td class="g-tam">{{ c.tamanho_camisa }}</td>
+            <td class="g-ag">{{ c.local_envio }}</td>
+            <td class="g-da">{{ c.data_admissao }}</td>
+
+
+            <td class="g-sit"><span class="fw-bold text-dark">{{ c.situacao }}</span></td>
+            <td>
+              <!-- Botão check abre modal -->
+              <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                data-bs-target="#confirmarEntregaModal-{{ c.id_colaborador }}">
+                <i class="bi bi-check"></i>
+              </button>
+
+              <!-- Modal Confirmar Entrega -->
+              <div class="modal fade" id="confirmarEntregaModal-{{ c.id_colaborador }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form method="post" action="{{ url_for('gestor') }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Entrega</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>O colaborador <strong>{{ c.nome_colaborador }}</strong> recebeu o kit?</p>
+                        <input type="hidden" name="id_colaborador" value="{{ c.id_colaborador }}">
+                        <input type="hidden" name="nova_situacao" value="entregue">
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Sim</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+
+    <!-- =================== RASTREAR KIT =================== -->
+    <div class="tab-pane fade" id="rastrear">
+      <div class="mb-3">
+        <select id="filtroSituacaoRastrear" class="form-select w-25">
+          <option value="">Todos</option>
+          <option value="entregue">entregue</option>
+          <option value="pendente">pendente</option>
+          <option value="enviado">enviado</option>
+          <option value="montar">montar</option>
+        </select>
+      </div>
+
+      <table class="table table-hover" id="tabelaRastrear">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Colaborador</th>
+            <th>Kit</th>
+            <th>Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- (preencha aqui se desejar usar essa aba futuramente) -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
-const pesquisaColab = document.getElementById("pesquisaColab");
-const filtroSituacao = document.getElementById("filtroSituacao");
+  // ====== Filtro genérico por coluna + filtro de situação ======
+  (function () {
+    const selCol = document.getElementById("gestorFiltroColuna");
+    const inpVal = document.getElementById("gestorFiltroValor");
+    const selSit = document.getElementById("gestorFiltroSituacao");
+    const tbody = document.querySelector("#tabelaColab tbody");
+    if (!selCol || !inpVal || !selSit || !tbody) return;
 
-function filtrarColaboradores() {
-    const termo = pesquisaColab.value.toLowerCase().trim();
-    const situacaoValor = filtroSituacao.value.toLowerCase().trim();
+    function aplicaFiltros() {
+      const cls = selCol.value;                               // ex.: "g-kit"
+      const q = (inpVal.value || "").toLowerCase().trim();  // termo texto
+      const sit = (selSit.value || "").toLowerCase().trim();  // situação
 
-    document.querySelectorAll("#tabelaColab tbody tr").forEach(tr => {
-        const nome = tr.children[1].textContent.toLowerCase().trim(); // coluna 2: Nome
-        const situacao = tr.children[7].textContent.toLowerCase().trim(); // coluna 8: Situação
+      tbody.querySelectorAll("tr").forEach(tr => {
+        // filtro por coluna
+        let passaColuna = true;
+        if (cls) {
+          const cell = tr.querySelector("." + cls);
+          const txt = (cell ? cell.textContent : "").toLowerCase().trim();
+          passaColuna = txt.includes(q);
+        }
+        // filtro por situação
+        let passaSit = true;
+        if (sit) {
+          const csit = (tr.querySelector(".g-sit")?.textContent || "").toLowerCase().trim();
+          passaSit = (csit === sit);
+        }
 
-        // mostra a linha se contém o nome digitado e corresponde à situação (ou se situação não filtrada)
-        tr.style.display = (nome.includes(termo) && (!situacaoValor || situacao === situacaoValor)) ? "" : "none";
+        tr.style.display = (passaColuna && passaSit) ? "" : "none";
+      });
+    }
+
+    selCol.addEventListener("change", () => {
+      const has = !!selCol.value;
+      inpVal.classList.toggle("d-none", !has);
+      const optText = has ? selCol.options[selCol.selectedIndex].textContent : "";
+      inpVal.placeholder = has ? `Pesquisar por ${optText.toLowerCase()}…` : "Digite para filtrar…";
+      inpVal.value = "";
+      aplicaFiltros();
+      if (has) inpVal.focus();
     });
-}
 
-// dispara ao digitar na pesquisa
-pesquisaColab.addEventListener("input", filtrarColaboradores);
-// dispara ao mudar o filtro de situação
-filtroSituacao.addEventListener("change", filtrarColaboradores);
+    inpVal.addEventListener("input", aplicaFiltros);
+    selSit.addEventListener("change", aplicaFiltros);
+  })();
 </script>
-
-
 {% endblock %}

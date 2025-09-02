@@ -10,14 +10,9 @@ from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
-# >>> Importações no estilo solicitado
 from utils import manager, models
 
 # ---------------- AJUSTES DE EXECUÇÃO ----------------
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-os.environ['FLASK_ENV'] = 'production'
-
 app = Flask(__name__)
 app.secret_key = "chave_secreta_supersegura"
 

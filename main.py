@@ -1,4 +1,4 @@
-import os, csv
+import os, csv, argparse
 from utils import manager, models
 
 usuario_teste = "script_teste"
@@ -109,16 +109,28 @@ def teste_usuarios():
         {"email": "novo@teste.com"}
     )
 
-def main():
-    print("=== Testes do sistema ===")
-    teste_agencias()
-    teste_colaboradores()
-    teste_estoque()
-    teste_kits()
-    teste_usuarios()
-    imprimir_log_formatado()
-    manager.debug_dados(mostrar_tudo=False, limite=3)
-    print("=== Testes finalisados ===")
+
+def main(debug=False):
+    if debug:
+        print(">>> DEBUG MODE ATIVO <<<")
+        manager.debug_dados(mostrar_tudo=False, limite=3)
+    else:
+        print(">>> MODO NORMAL <<<")
+        teste_agencias()
+        teste_colaboradores()
+        teste_estoque()
+        teste_kits()
+        teste_usuarios()
+        imprimir_log_formatado()
+        pass
+    
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Sistema Sprout ConxSafra")
+    parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="Executa o programa em modo debug"
+    )
+    args = parser.parse_args()
+    main(debug=args.debug)

@@ -4,8 +4,8 @@ from typing import Optional
 @dataclass
 class Agencia:
     id_agencia: str = ""
-    nome_agencia: str = ""
-    local_envio: str = ""
+    cidade_envio: str = ""
+    uf_envio: str = ""
     prazo_dias: str = ""
 
 @dataclass
@@ -48,6 +48,6 @@ class Colaborador:
     data_admissao : str = ""
     tamanho_camisa: Optional[str] = None
     id_agencia : str = ""
-    nome_agencia : str = ""
-    local_envio : str = ""
+    cidade_envio : str = ""
+    uf_envio : str = ""
     situacao : str = ""

@@ -61,20 +61,26 @@ def teste_agencias():
     teste_crud(
         models.Agencia,
         "id_agencia",
-        {"nome_agencia": "Agência Teste", "local_envio": "Rua X", "prazo_dias": "999"},
-        {"nome_agencia": "Agência Atualizada"}
+        {"cidade_envio": "Agência Teste", "uf_envio": "Rua X", "prazo_dias": "999"},
+        {"cidade_envio": "Agência Atualizada"}
     )
+
 
 def teste_colaboradores():
     teste_crud(
         models.Colaborador,
         "id_colaborador",
         {"nome_colaborador": "Maria Teste",
-         "email_colaborador": "maria@teste.com", "id_gestor": "0001",
-         "id_kit": "0001", "data_admissao": "2024-01-01",
-         "tamanho_camisa": "G", "id_agencia": "A001", "situacao": "Ativo"},
+         "email_colaborador": "maria@teste.com",
+         "id_gestor": "U001",
+         "id_kit": "K001",
+         "data_admissao": "2024-01-01",
+         "tamanho_camisa": "G",
+         "id_agencia": "A001",
+         "situacao": "Ativo"},
         {"situacao": "Inativo"}
     )
+
 
 def teste_estoque():
     teste_crud(
@@ -111,6 +117,7 @@ def main():
     teste_kits()
     teste_usuarios()
     imprimir_log_formatado()
+    manager.debug_dados(mostrar_tudo=False, limite=3)
     print("=== Testes finalisados ===")
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+﻿id_kit,nome_kit,id_item,item,tamanho_camisa
+K001,safrapay,E001,camisa safrapay,G
+K001,safrapay,E002,camisa safrapay,PP
+K001,safrapay,E003,camisa safrapay,GG
+K001,safrapay,E009,caneta,NA
+K001,safrapay,E011,caneca safrapay,NA
+K001,safrapay,E013,caderno,NA
+K001,safrapay,E015,mochila safrapay,NA
+K002,financeira,E004,camisa financeira,G
+K002,financeira,E005,camisa financeira,M
+K002,financeira,E006,camisa financeira,P
+K002,financeira,E007,camisa financeira,PP
+K002,financeira,E008,camisa financeira,GG
+K002,financeira,E010,caneta,NA
+K002,financeira,E012,caneca financeira,NA
+K002,financeira,E014,caderno,NA
+K002,financeira,E016,mochila financeira,NA

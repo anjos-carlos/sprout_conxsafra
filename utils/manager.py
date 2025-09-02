@@ -89,6 +89,48 @@ def gerar_id(modelo: Type) -> str:
     return f"{prefixo}{proximo:03d}"
 
 
+def validar_relacionamentos(novo_registro, modelo):
+    if modelo.__name__ == "Colaborador":
+        usuarios = read_csv(Usuario)
+        if not any(u["id_usuario"] == novo_registro.id_gestor for u in usuarios):
+            raise ValueError(f"Gestor {novo_registro.id_gestor} não existe em usuários")
+        kits = read_csv(Kit)
+        if not any(k["id_kit"] == novo_registro.id_kit for k in kits):
+            raise ValueError(f"Kit {novo_registro.id_kit} não existe em kits")
+        agencias = read_csv(Agencia)
+        if not any(a["id_agencia"] == novo_registro.id_agencia for a in agencias):
+            raise ValueError(f"Agência {novo_registro.id_agencia} não existe em agencias")
+    elif modelo.__name__ == "EstoqueItem":
+        kits = read_csv(Kit)
+        if not any(k["id_kit"] == novo_registro.id_kit for k in kits):
+            raise ValueError(f"Kit {novo_registro.id_kit} não existe em kits")
+
+
+
+# ---------------- DEBUG ---------------- #
+
+def debug_dados(mostrar_tudo: bool = False, limite: int = 5):
+    restore_data()
+    print("\n=== DEBUG: Conteúdo dos arquivos CSV ===\n")
+    for modelo, nome_arquivo in MODEL_FILE_MAP.items():
+        caminho = os.path.join(DATA_DIR, nome_arquivo)
+        if not os.path.exists(caminho):
+            print(f"[AVISO] {nome_arquivo} não encontrado.")
+            continue
+        print(f"\n--- {nome_arquivo} ({modelo.__name__}) ---")
+        with open(caminho, "r", encoding="utf-8-sig") as f:
+            reader = list(csv.DictReader(f))
+            if not reader:
+                print("(vazio)")
+            else:
+                registros = reader if mostrar_tudo else reader[:limite]
+                for i, row in enumerate(registros, start=1):
+                    print(f"{i}: {row}")
+                if not mostrar_tudo and len(reader) > limite:
+                    print(f"... ({len(reader)-limite} registros ocultos)")
+    print("\n=== FIM DEBUG ===\n")
+
+
 # ---------------- LOG ---------------- #
 
 def log_action(usuario: str, resultado: dict):
@@ -193,8 +235,8 @@ def listar_registros(modelo: Type) -> List:
 def adicionar_registro(novo_registro, modelo: Type):
     dados = read_csv(modelo)
     chave_id = [f.name for f in fields(modelo) if f.name.startswith("id_")][0]
-    if not getattr(novo_registro, chave_id):
-        setattr(novo_registro, chave_id, gerar_id(modelo))
+    setattr(novo_registro, chave_id, gerar_id(modelo))
+    validar_relacionamentos(novo_registro, modelo)
     if modelo == Colaborador:
         id_kit = novo_registro.id_kit
         tamanho_camisa = novo_registro.tamanho_camisa

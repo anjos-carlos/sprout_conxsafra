@@ -110,6 +110,7 @@ def main():
     teste_kits()
     teste_usuarios()
     imprimir_log_formatado()
+    print("=== Testes finalisados ===")
 
 if __name__ == "__main__":
     main()

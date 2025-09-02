@@ -5,18 +5,15 @@ import sys
 import logging
 import os
 import csv
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from utils.manager import *   # read_csv, write_csv, listar_registros, adicionar_registro, atualizar_registro, remover_registro, validar_estoque_para_kit, ajustar_estoque_para_kit
-from utils.models import *    # Agencia, Colaborador, EstoqueItem, Kit, Usuario
+import json
 from datetime import datetime
 
-# $ alterar para puxar o utils
-# from utils import manager
-# from utils import models  
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
-# $ nas funções de adicionar, remover e alterar tem que chamar o log
+# >>> Importações no estilo solicitado
+from utils import manager, models
 
+# ---------------- AJUSTES DE EXECUÇÃO ----------------
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 os.environ['FLASK_ENV'] = 'production'
@@ -24,7 +21,9 @@ os.environ['FLASK_ENV'] = 'production'
 app = Flask(__name__)
 app.secret_key = "chave_secreta_supersegura"
 
-# ---------------- HELPERS ROBUSTOS ----------------
+
+# ======================= HELPERS =======================
+
 def normalize(value):
     """Converte qualquer valor para string segura (sem quebrar tipos)."""
     if value is None:
@@ -35,67 +34,38 @@ def normalize(value):
         return str(value).strip()
     return str(value).strip()
 
-def get_field(rec, *names, default=""):
-    """Lê rec.nome OU rec['nome'], tentando aliases. Retorna sem normalizar."""
-    for name in names:
-        if hasattr(rec, name):
-            val = getattr(rec, name)
-            return default if val is None else val
-        if isinstance(rec, dict) and name in rec:
-            val = rec.get(name)
-            return default if val is None else val
-    return default
 
 def flatten_record(u):
     """
     Converte formatos estranhos em dict plano.
     Suporta: dict(s) e dataclass/objeto (usa vars()).
     """
-    # dict
     if isinstance(u, dict):
-        # se já parece o formato final, devolve como está
-        if any(k in u for k in ("usuario", "login", "username", "nome_usuario")) or \
-           any(k in u for k in ("id_usuario", "email", "nome_classe", "senha", "password", "hash_senha")):
-            return u
-        if len(u) == 1:
-            inner = next(iter(u.values()))
-            if isinstance(inner, dict):
-                return inner
-        for v in u.values():
-            if isinstance(v, dict):
-                return v
         return u
 
-    # objeto / dataclass
     if hasattr(u, "__dict__"):
-        d = {k: v for k, v in vars(u).items() if not k.startswith("_")}
-        if len(d) == 1:
-            inner = next(iter(d.values()))
-            if isinstance(inner, dict):
-                return inner
-        for v in d.values():
-            if isinstance(v, dict):
-                return v
-        return d
+        return {k: v for k, v in vars(u).items() if not k.startswith("_")}
 
     return {"raw": u}
+
 
 def build_class_map(usuarios_flat):
     """Aprende mapa nome_classe -> id_classe a partir dos usuários existentes."""
     m = {}
     for u in usuarios_flat or []:
         nome = (u.get("nome_classe") or "").strip()
-        cid  = (u.get("id_classe") or "").strip()
+        cid = (u.get("id_classe") or "").strip()
         if nome and cid and nome not in m:
             m[nome] = cid
     if not m:
         m = {"Administrador": "0001", "Gestor": "0002", "Almoxarifado": "0003", "RH": "0004"}
     return m
 
+
 def gerar_id_item():
     """Gera próximo id_item numérico com 4 dígitos baseado nos itens atuais do estoque (via storage seguro)."""
     try:
-        lista = listar_registros(EstoqueItem) or []
+        lista = manager.listar_registros(models.EstoqueItem) or []
     except Exception:
         lista = []
 
@@ -107,6 +77,7 @@ def gerar_id_item():
             max_n = max(max_n, int(s))
     proximo = max_n + 1 if max_n >= 0 else 1
     return str(proximo).zfill(4)
+
 
 def senha_confere(senha_digitada: str, senha_armazenada: str) -> bool:
     """Suporta hash (Werkzeug) OU texto puro (CSV)."""
@@ -125,21 +96,19 @@ def senha_confere(senha_digitada: str, senha_armazenada: str) -> bool:
             pass
     return sd == sa
 
-# ---------- Catálogo de kits/itens/tamanhos usando storage seguro ----------
+
+# ======= Catálogo de kits/itens/tamanhos usando o storage seguro =======
+
 def _build_kit_catalog_from_rows(rows):
-    """
-    Constrói o catálogo a partir de linhas (dicts/objs) do modelo Kit,
-    lidas via read_csv(Kit) ou listar_registros(Kit).
-    """
     kit_catalog = {}
     size_order = ["PP", "P", "M", "G", "GG", "XG", "XXG", "XXL"]
 
     for row in rows or []:
         r = flatten_record(row)
-        id_kit  = (r.get("id_kit") or "").strip()
-        nome    = (r.get("nome_kit") or "").strip()
+        id_kit = (r.get("id_kit") or "").strip()
+        nome = (r.get("nome_kit") or "").strip()
         item_nm = (r.get("item") or "").strip()
-        size    = (r.get("tamanho_camisa") or "").strip()
+        size = (r.get("tamanho_camisa") or "").strip()
 
         if not nome:
             continue
@@ -164,63 +133,96 @@ def _build_kit_catalog_from_rows(rows):
     nomes_kits_ordenados = sorted(kit_catalog.keys(), key=lambda s: s.lower())
     return kit_catalog, nomes_kits_ordenados
 
+
 def load_kit_catalog_csv():
-    """Nome legado mantido: agora lê via read_csv(Kit) (seguro)."""
+    """Nome legado mantido: agora lê via manager.read_csv(Kit)."""
     try:
-        rows = read_csv(Kit)  # usa restore/backup por dentro
+        rows = manager.read_csv(models.Kit)  # usa restore/backup por dentro
     except Exception:
         rows = []
     return _build_kit_catalog_from_rows(rows)
+
 
 def carregar_kits_catalogo_csv():
     """Compat: delega para load_kit_catalog_csv()."""
     return load_kit_catalog_csv()
 
+
 def carregar_usuarios_unificado():
     """
-    1) Tenta via listar_registros(Usuario) (objetos).
-    2) Fallback: read_csv(Usuario) (dicts).
+    1) Tenta via manager.listar_registros(models.Usuario) (objetos).
+    2) Fallback: manager.read_csv(models.Usuario) (dicts).
     Retorna lista de dicts padronizados.
     """
     usuarios_norm = []
 
-    # 1) via manager (objetos)
     try:
-        lista = listar_registros(Usuario) or []
+        lista = manager.listar_registros(models.Usuario) or []
     except Exception:
         lista = []
     for u in lista:
         rec = flatten_record(u)
         usuarios_norm.append({
-            "id_usuario":  normalize(rec.get("id_usuario") or rec.get("id") or rec.get("user_id")),
-            "usuario":     normalize(rec.get("usuario") or rec.get("login") or rec.get("username") or rec.get("nome_usuario")),
-            "senha":       rec.get("senha") or rec.get("password") or rec.get("hash_senha"),
-            "nome":        normalize(rec.get("nome") or rec.get("nome_completo") or rec.get("name")),
-            "email":       normalize(rec.get("email")),
-            "id_classe":   normalize(rec.get("id_classe") or rec.get("classe_id")),
+            "id_usuario": normalize(rec.get("id_usuario") or rec.get("id") or rec.get("user_id")),
+            "usuario": normalize(rec.get("usuario") or rec.get("login") or rec.get("username") or rec.get("nome_usuario")),
+            "senha": rec.get("senha") or rec.get("password") or rec.get("hash_senha"),
+            "nome": normalize(rec.get("nome") or rec.get("nome_completo") or rec.get("name")),
+            "email": normalize(rec.get("email")),
+            "id_classe": normalize(rec.get("id_classe") or rec.get("classe_id")),
             "nome_classe": normalize(rec.get("nome_classe") or rec.get("perfil") or rec.get("role")),
         })
     if usuarios_norm:
         return usuarios_norm
 
-    # 2) fallback seguro: read_csv(Usuario)
+    # fallback seguro
     try:
-        rows = read_csv(Usuario) or []
+        rows = manager.read_csv(models.Usuario) or []
         for r0 in rows:
             r = flatten_record(r0)
             usuarios_norm.append({
-                "id_usuario":  normalize(r.get("id_usuario")),
-                "usuario":     normalize(r.get("usuario")),
-                "senha":       r.get("senha", ""),
-                "nome":        normalize(r.get("nome")),
-                "email":       normalize(r.get("email")),
-                "id_classe":   normalize(r.get("id_classe")),
+                "id_usuario": normalize(r.get("id_usuario")),
+                "usuario": normalize(r.get("usuario")),
+                "senha": r.get("senha", ""),
+                "nome": normalize(r.get("nome")),
+                "email": normalize(r.get("email")),
+                "id_classe": normalize(r.get("id_classe")),
                 "nome_classe": normalize(r.get("nome_classe")),
             })
     except Exception as e:
         print("[LOGIN DEBUG] Fallback seguro falhou:", e)
 
     return usuarios_norm
+
+
+# ======================= LOG / UTILIDADES =======================
+
+def usuario_atual():
+    """Retorna login/nome do usuário da sessão para registrar no log."""
+    u = session.get("usuario") or {}
+    return u.get("usuario") or u.get("nome") or "sistema"
+
+
+def imprimir_log_formatado():
+    """Imprime o log formatado usando manager.restore/backup."""
+    manager.restore_data()
+    log_file = os.path.join(manager.DATA_DIR, "logs.csv")
+    if not os.path.exists(log_file):
+        print("\n[LOG] Nenhum log encontrado.")
+        manager.backup_data()
+        return
+
+    print("\n===== LOG DE AÇÕES =====")
+    with open(log_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader, start=1):
+            print(f"\n#{i} [{row['data']} {row['hora']}] usuário={row['usuario']} ação={row['acao']}")
+            print("  - Antes :", row["linha_antes"])
+            print("  - Depois:", row["linha_depois"])
+    print("========================\n")
+    manager.backup_data()
+
+
+# ======================= ROTAS =======================
 
 # ---------------- LOGIN ----------------
 @app.route("/", methods=["GET", "POST"])
@@ -230,32 +232,28 @@ def login():
         senha_input   = normalize(request.form.get("senha"))
 
         usuarios = carregar_usuarios_unificado()
-
-        # DEBUG opcional
         print("\n[LOGIN DEBUG] total usuarios:", len(usuarios))
-        for i, u in enumerate(usuarios[:5]):
+        for i, u in enumerate(usuarios[:5]):  # mostra até 5
             u_copy = dict(u)
             if "senha" in u_copy:
                 u_copy["senha"] = "(oculta)"
             print(f"[LOGIN DEBUG] user[{i}]:", u_copy)
 
-        # procura usuário (case-insensitive)
-        candidato = next(
-            (u for u in usuarios if u.get("usuario", "").lower() == usuario_input.lower()),
-            None
-        )
+        candidato = next((u for u in usuarios
+                          if u.get("usuario","").lower() == usuario_input.lower()), None)
 
         if not candidato:
             flash("Usuário ou senha inválidos!", "danger")
             print(f"[LOGIN DEBUG] Usuário '{usuario_input}' não encontrado.")
             return render_template("login.html")
 
-        if not senha_confere(senha_input, candidato.get("senha", "")):
+        ok = senha_confere(senha_input, candidato.get("senha",""))
+        print("[LOGIN DEBUG] check senha:", ok)
+        if not ok:
             flash("Usuário ou senha inválidos!", "danger")
             print("[LOGIN DEBUG] Senha não confere para:", candidato.get("usuario"))
             return render_template("login.html")
 
-        # guarda na sessão apenas dados essenciais
         session["usuario"] = {
             "id_usuario":  candidato.get("id_usuario"),
             "usuario":     candidato.get("usuario"),
@@ -269,7 +267,6 @@ def login():
 
     return render_template("login.html")
 
-# $ retornar o nome do usuario para ser usado na função log
 
 # ---------------- HOME ----------------
 @app.route("/home")
@@ -278,15 +275,19 @@ def home():
         return redirect(url_for("login"))
     return render_template("home.html", usuario=session["usuario"])
 
+
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
+
 # ---------------- CONTROLE DE ACESSO ----------------
 def acesso_permitido(perfis):
-    return session.get("usuario", {}).get("nome_classe") in perfis or session.get("usuario", {}).get("nome_classe") == "Administrador"
+    return session.get("usuario", {}).get("nome_classe") in perfis or \
+           session.get("usuario", {}).get("nome_classe") == "Administrador"
+
 
 # ---------------- ALMOXARIFADO ----------------
 @app.route("/almoxarifado", methods=["GET", "POST"])
@@ -296,24 +297,23 @@ def almoxarifado():
         return redirect(url_for("home"))
 
     try:
-        kits_raw           = listar_registros(Kit)          or []
-        estoque_raw        = listar_registros(EstoqueItem)  or []
-        colaboradores_raw  = listar_registros(Colaborador)  or []
+        kits_raw = manager.listar_registros(models.Kit) or []
+        estoque_raw = manager.listar_registros(models.EstoqueItem) or []
+        colaboradores_raw = manager.listar_registros(models.Colaborador) or []
     except Exception:
         kits_raw, estoque_raw, colaboradores_raw = [], [], []
 
-    kits          = [flatten_record(k) for k in kits_raw]
-    estoque       = [flatten_record(e) for e in estoque_raw]
+    kits = [flatten_record(k) for k in kits_raw]
+    estoque = [flatten_record(e) for e in estoque_raw]
     colaboradores = [flatten_record(c) for c in colaboradores_raw]
 
-    # Catálogo de kits (via read_csv(Kit) -> seguro)
     kit_catalog, nomes_kits_ordenados = load_kit_catalog_csv()
 
     # Mapa auxiliar nome_kit -> id_kit
     kits_map = {}
     for e in estoque:
         nomek = (e.get("nome_kit") or "").strip()
-        idk   = (e.get("id_kit") or "").strip()
+        idk = (e.get("id_kit") or "").strip()
         if nomek and idk and nomek not in kits_map:
             kits_map[nomek] = idk
 
@@ -321,15 +321,16 @@ def almoxarifado():
 
         # ADICIONAR item de estoque
         if "adicionar_estoque" in request.form:
-            novo_item = EstoqueItem(
-                id_item=gerar_id_item(),  # gera automaticamente
+            novo_item = models.EstoqueItem(
+                id_item=gerar_id_item(),
                 item=request.form["item"],
                 tamanho_camisa=request.form.get("tamanho_camisa", ""),
                 id_kit=request.form.get("id_kit", ""),
                 nome_kit=request.form.get("nome_kit", ""),
                 qntd=int(request.form["qntd"]),
             )
-            adicionar_registro(novo_item, EstoqueItem)
+            resultado = manager.adicionar_registro(novo_item, models.EstoqueItem)
+            manager.log_action(usuario_atual(), resultado)
             flash("Item adicionado com sucesso!", "success")
 
         # EDITAR ITEM (quantidade/tamanho)
@@ -340,14 +341,16 @@ def almoxarifado():
                 novos["qntd"] = int(request.form["qntd"])
             if request.form.get("tamanho_camisa"):
                 novos["tamanho_camisa"] = request.form["tamanho_camisa"]
-            atualizar_registro("id_item", id_item, novos, EstoqueItem)
+            resultado = manager.atualizar_registro("id_item", id_item, novos, models.EstoqueItem)
+            manager.log_action(usuario_atual(), resultado)
             flash("Estoque atualizado com sucesso!", "success")
 
         # ALTERAR SITUAÇÃO COLABORADOR
         if "alterar_situacao" in request.form:
             id_colab = request.form["id_colaborador"]
             nova_situacao = request.form["situacao"]
-            atualizar_registro("id_colaborador", id_colab, {"situacao": nova_situacao}, Colaborador)
+            resultado = manager.atualizar_registro("id_colaborador", id_colab, {"situacao": nova_situacao}, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Situação alterada com sucesso!", "success")
 
         return redirect(url_for("almoxarifado"))
@@ -362,6 +365,7 @@ def almoxarifado():
         nomes_kits_ordenados=nomes_kits_ordenados
     )
 
+
 # ---------------- REMOVER USUÁRIO (via RH) ----------------
 @app.route("/remover_usuario", methods=["POST"])
 def remover_usuario():
@@ -371,10 +375,12 @@ def remover_usuario():
 
     id_usuario = request.form.get("id_usuario")
     if id_usuario:
-        remover_registro("id_usuario", id_usuario, Usuario)
+        resultado = manager.remover_registro("id_usuario", id_usuario, models.Usuario)
+        manager.log_action(usuario_atual(), resultado)
         flash("Usuário removido com sucesso!", "success")
 
     return redirect(url_for("rh"))
+
 
 # ---------------- GESTOR ----------------
 @app.route("/gestor", methods=["GET", "POST"])
@@ -383,28 +389,28 @@ def gestor():
         flash("Acesso negado!", "danger")
         return redirect(url_for("home"))
     try:
-        colaboradores_raw = listar_registros(Colaborador) or []
+        colaboradores_raw = manager.listar_registros(models.Colaborador) or []
     except Exception:
         colaboradores_raw = []
 
     colaboradores = [flatten_record(c) for c in colaboradores_raw]
 
     u = session.get("usuario", {})
-    perfil    = (u.get("nome_classe") or "").strip()
-    my_id     = normalize(u.get("id_usuario"))
-    my_nome   = normalize(u.get("nome")).lower()
-    my_email  = normalize(u.get("email")).lower()
-    my_login  = normalize(u.get("usuario")).lower()
+    perfil = (u.get("nome_classe") or "").strip()
+    my_id = normalize(u.get("id_usuario"))
+    my_nome = normalize(u.get("nome")).lower()
+    my_email = normalize(u.get("email")).lower()
+    my_login = normalize(u.get("usuario")).lower()
 
     def is_my_collab(rec: dict) -> bool:
-        idg    = normalize(rec.get("id_gestor"))
-        nomeg  = normalize(rec.get("nome_gestor")).lower()
+        idg = normalize(rec.get("id_gestor"))
+        nomeg = normalize(rec.get("nome_gestor")).lower()
         emailg = normalize(rec.get("email_gestor")).lower()
         return (
-            (my_id    and idg    and idg    == my_id)    or
+            (my_id and idg and idg == my_id) or
             (my_email and emailg and emailg == my_email) or
-            (my_nome  and nomeg  and nomeg  == my_nome)  or
-            (my_login and nomeg  and nomeg  == my_login)
+            (my_nome and nomeg and nomeg == my_nome) or
+            (my_login and nomeg and nomeg == my_login)
         )
 
     if perfil == "Gestor":
@@ -416,13 +422,14 @@ def gestor():
             nova_situacao = request.form["nova_situacao"]
 
             if perfil == "Gestor":
-                all_cols = [flatten_record(x) for x in (listar_registros(Colaborador) or [])]
+                all_cols = [flatten_record(x) for x in (manager.listar_registros(models.Colaborador) or [])]
                 alvo = next((r for r in all_cols if normalize(r.get("id_colaborador")) == normalize(id_colab)), None)
                 if not alvo or not is_my_collab(alvo):
                     flash("Você não pode alterar colaboradores de outro gestor.", "danger")
                     return redirect(url_for("gestor"))
 
-            atualizar_registro("id_colaborador", id_colab, {"situacao": nova_situacao}, Colaborador)
+            resultado = manager.atualizar_registro("id_colaborador", id_colab, {"situacao": nova_situacao}, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Situação atualizada!", "success")
             return redirect(url_for("gestor"))
 
@@ -430,17 +437,19 @@ def gestor():
             id_colab = request.form["id_colaborador"]
 
             if perfil == "Gestor":
-                all_cols = [flatten_record(x) for x in (listar_registros(Colaborador) or [])]
+                all_cols = [flatten_record(x) for x in (manager.listar_registros(models.Colaborador) or [])]
                 alvo = next((r for r in all_cols if normalize(r.get("id_colaborador")) == normalize(id_colab)), None)
                 if not alvo or not is_my_collab(alvo):
                     flash("Você não pode remover colaboradores de outro gestor.", "danger")
                     return redirect(url_for("gestor"))
 
-            remover_registro("id_colaborador", id_colab, Colaborador)
+            resultado = manager.remover_registro("id_colaborador", id_colab, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Colaborador removido!", "success")
             return redirect(url_for("gestor"))
 
     return render_template("gestor.html", colaboradores=colaboradores)
+
 
 # ---------------- RH ----------------
 @app.route("/rh", methods=["GET", "POST"])
@@ -450,26 +459,26 @@ def rh():
         return redirect(url_for("home"))
 
     try:
-        usuarios_raw       = listar_registros(Usuario)      or []
-        colaboradores_raw  = listar_registros(Colaborador)  or []
-        kits_raw           = listar_registros(Kit)          or []
-        estoque_raw        = listar_registros(EstoqueItem)  or []
-        agencias_raw       = listar_registros(Agencia)      or []
+        usuarios_raw = manager.listar_registros(models.Usuario) or []
+        colaboradores_raw = manager.listar_registros(models.Colaborador) or []
+        kits_raw = manager.listar_registros(models.Kit) or []
+        estoque_raw = manager.listar_registros(models.EstoqueItem) or []
+        agencias_raw = manager.listar_registros(models.Agencia) or []
     except Exception:
         usuarios_raw, colaboradores_raw, kits_raw, estoque_raw, agencias_raw = [], [], [], [], []
 
-    usuarios      = [flatten_record(u) for u in usuarios_raw]
+    usuarios = [flatten_record(u) for u in usuarios_raw]
     colaboradores = [flatten_record(c) for c in colaboradores_raw]
-    kits          = [flatten_record(k) for k in kits_raw]
-    estoque       = [flatten_record(e) for e in estoque_raw]
-    agencias      = [flatten_record(a) for a in agencias_raw]
+    kits = [flatten_record(k) for k in kits_raw]
+    estoque = [flatten_record(e) for e in estoque_raw]
+    agencias = [flatten_record(a) for a in agencias_raw]
 
     class_map = build_class_map(usuarios)
 
     if request.method == "POST":
         # ---- Usuários ----
         if "adicionar_usuario" in request.form:
-            novo = Usuario(
+            novo = models.Usuario(
                 id_usuario=request.form["id_usuario"],
                 usuario=request.form["usuario"],
                 senha=request.form["senha"],
@@ -478,7 +487,8 @@ def rh():
                 id_classe=request.form["id_classe"],
                 nome_classe=request.form["nome_classe"],
             )
-            adicionar_registro(novo, Usuario)
+            resultado = manager.adicionar_registro(novo, models.Usuario)
+            manager.log_action(usuario_atual(), resultado)
             flash("Usuário adicionado!", "success")
 
         if "editar_usuario" in request.form:
@@ -492,17 +502,19 @@ def rh():
                 "nome_classe": request.form.get("nome_classe", "")
             }
             novos_dados = {k: v for k, v in novos_dados.items() if v not in (None, "")}
-            atualizar_registro("id_usuario", id_usuario, novos_dados, Usuario)
+            resultado = manager.atualizar_registro("id_usuario", id_usuario, novos_dados, models.Usuario)
+            manager.log_action(usuario_atual(), resultado)
             flash("Usuário atualizado!", "success")
 
         if "remover_usuario" in request.form:
             id_usuario = request.form["id_usuario"]
-            remover_registro("id_usuario", id_usuario, Usuario)
+            resultado = manager.remover_registro("id_usuario", id_usuario, models.Usuario)
+            manager.log_action(usuario_atual(), resultado)
             flash("Usuário removido!", "success")
 
         # ---- Colaboradores ----
         if "adicionar_colaborador" in request.form:
-            novo = Colaborador(
+            novo = models.Colaborador(
                 id_colaborador=request.form["id_colaborador"],
                 nome_colaborador=request.form["nome_colaborador"],
                 email_colaborador=request.form["email_colaborador"],
@@ -518,7 +530,8 @@ def rh():
                 local_envio=request.form.get("local_envio", ""),
                 situacao=request.form.get("situacao", "Ativo")
             )
-            adicionar_registro(novo, Colaborador)
+            resultado = manager.adicionar_registro(novo, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Colaborador adicionado!", "success")
 
         if "editar_colaborador" in request.form:
@@ -539,25 +552,28 @@ def rh():
                 "situacao": request.form.get("situacao", "")
             }
             novos = {k: v for k, v in novos.items() if v not in (None, "")}
-            atualizar_registro("id_colaborador", id_colab, novos, Colaborador)
+            resultado = manager.atualizar_registro("id_colaborador", id_colab, novos, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Colaborador atualizado!", "success")
 
         if "remover_colaborador" in request.form:
             id_colab = request.form["id_colaborador"]
-            remover_registro("id_colaborador", id_colab, Colaborador)
+            resultado = manager.remover_registro("id_colaborador", id_colab, models.Colaborador)
+            manager.log_action(usuario_atual(), resultado)
             flash("Colaborador removido!", "success")
 
         # ---- Estoque ----
         if "adicionar_estoque" in request.form:
-            novo_item = EstoqueItem(
-                id_item=request.form["id_item"],  # mantém a lógica atual do form do RH
+            novo_item = models.EstoqueItem(
+                id_item=request.form["id_item"],  # RH mantém livre
                 item=request.form["item"],
                 tamanho_camisa=request.form.get("tamanho_camisa", ""),
                 id_kit=request.form["id_kit"],
                 nome_kit=request.form.get("nome_kit", ""),
                 qntd=int(request.form["qntd"]),
             )
-            adicionar_registro(novo_item, EstoqueItem)
+            resultado = manager.adicionar_registro(novo_item, models.EstoqueItem)
+            manager.log_action(usuario_atual(), resultado)
             flash("Item de estoque adicionado!", "success")
 
         if "editar_estoque" in request.form:
@@ -567,24 +583,27 @@ def rh():
                 "qntd": int(request.form["qntd"]) if request.form.get("qntd") else None
             }
             novos = {k: v for k, v in novos.items() if v not in (None, "")}
-            atualizar_registro("id_item", id_item, novos, EstoqueItem)
+            resultado = manager.atualizar_registro("id_item", id_item, novos, models.EstoqueItem)
+            manager.log_action(usuario_atual(), resultado)
             flash("Estoque atualizado!", "success")
 
         if "remover_estoque" in request.form:
             id_item = request.form["id_item"]
-            remover_registro("id_item", id_item, EstoqueItem)
+            resultado = manager.remover_registro("id_item", id_item, models.EstoqueItem)
+            manager.log_action(usuario_atual(), resultado)
             flash("Item de estoque removido!", "success")
 
         # ---- Kits ----
         if "adicionar_kit" in request.form:
-            novo = Kit(
+            novo = models.Kit(
                 id_kit=request.form["id_kit"],
                 nome_kit=request.form["nome_kit"],
                 id_item=request.form.get("id_item", ""),
                 item=request.form.get("item", ""),
                 tamanho_camisa=request.form.get("tamanho_camisa", "")
             )
-            adicionar_registro(novo, Kit)
+            resultado = manager.adicionar_registro(novo, models.Kit)
+            manager.log_action(usuario_atual(), resultado)
             flash("Kit adicionado!", "success")
 
         if "editar_kit" in request.form:
@@ -597,12 +616,14 @@ def rh():
                 "tamanho_camisa": request.form.get("tamanho_camisa", "")
             }
             novos = {k: v for k, v in novos.items() if v not in (None, "")}
-            atualizar_registro("id_kit", id_original, novos, Kit)
+            resultado = manager.atualizar_registro("id_kit", id_original, novos, models.Kit)
+            manager.log_action(usuario_atual(), resultado)
             flash("Kit atualizado!", "success")
 
         if "remover_kit" in request.form:
             id_kit = request.form["id_kit"]
-            remover_registro("id_kit", id_kit, Kit)
+            resultado = manager.remover_registro("id_kit", id_kit, models.Kit)
+            manager.log_action(usuario_atual(), resultado)
             flash("Kit removido!", "success")
 
         return redirect(url_for("rh"))
@@ -617,10 +638,13 @@ def rh():
         class_map=class_map,
     )
 
-def run_app():
-    app.run(debug=False, use_reloader=False, port = 5000)
 
-# ---------------- RODA APLICATIVO ----------------
+# ======================= BOOTSTRAP APP =======================
+
+def run_app():
+    app.run(debug=False, use_reloader=False, port=5000)
+
+
 if __name__ == "__main__":
     url = "http://127.0.0.1:5000/"
     server_thread = threading.Thread(target=run_app)

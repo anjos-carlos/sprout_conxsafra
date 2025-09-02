@@ -28,10 +28,12 @@ MODEL_FILE_MAP = {
 def read_csv(model):
     restore_data()
     file = os.path.join(DATA_DIR, MODEL_FILE_MAP[model])
-    if not os.path.exists(file): return []
-    with open(file, "r", encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f))
+    rows = []
+    if os.path.exists(file):
+        with open(file, "r", encoding="utf-8-sig", newline="") as f:
+            rows = list(csv.DictReader(f))
     backup_data()
+    return rows
 
 
 def write_csv(model, data):
@@ -45,7 +47,12 @@ def write_csv(model, data):
 
 
 def dicts_to_objects(data: List[dict], modelo: Type):
-    return [modelo({k: (v if v != "" else None) for k, v in d.items()}) for d in data]
+    allowed = {f.name for f in fields(modelo)}
+    objs = []
+    for d in data:
+        payload = {k: (v if v != "" else None) for k, v in d.items() if k in allowed}
+        objs.append(modelo(**payload))
+    return objs
 
 
 def objects_to_dicts(objs: List):

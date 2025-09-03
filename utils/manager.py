@@ -274,6 +274,105 @@ def validar_estoque_para_kit(id_kit: str, tamanho_camisa: str) -> bool:
     return True
 
 
+# ---------------- IMPORTAÇÃO DE COLABORADORES ---------------- #
+
+def importar_colaboradores(dados: list, usuario_exec: str = None):
+    write_csv(Colaborador, [])
+    novos_colaboradores = []
+    criados_usuarios = 0
+    criados_kits = 0
+    for row in dados:
+        row = {k.strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items() if k}
+        nome_gestor = row.get("superior imediato", "")
+        email_gestor = row.get("e-mail", "")
+        id_gestor = ""
+        if nome_gestor:
+            usuarios = read_csv(Usuario)
+            usuario_existente = next((u for u in usuarios if u["nome_usuario"] == nome_gestor), None)
+            if usuario_existente:
+                id_gestor = usuario_existente["id_usuario"]
+            else:
+                novo_usuario = Usuario(
+                    id_usuario=gerar_id(Usuario),
+                    nome_usuario=nome_gestor,
+                    email_usuario=email_gestor,
+                    senha_usuario="",
+                    id_agencia="",
+                    cidade="",
+                    uf=""
+                )
+                usuarios.append(asdict(novo_usuario))
+                write_csv(Usuario, usuarios)
+                id_gestor = novo_usuario.id_usuario
+                criados_usuarios += 1
+                log_action(usuario_exec, {
+                    "acao": "REGISTRAR_USUARIO_AUTO",
+                    "linha_antes": None,
+                    "linha_depois": asdict(novo_usuario)
+                })
+        nome_kit = row.get("kit", "")
+        id_kit = ""
+        if nome_kit:
+            kits = read_csv(Kit)
+            kit_existente = next((k for k in kits if k["nome_kit"] == nome_kit), None)
+            if kit_existente:
+                id_kit = kit_existente["id_kit"]
+            else:
+                itens_kit = {}
+                for col, val in row.items():
+                    if col not in [
+                        "id","registro","nome","data adimissão","motivo","tipo vaga","posição","data nascto",
+                        "cargo","área","área padrão","cpf","pis","cod. horário","descr. horário",
+                        "tipo experiencia","cod. depto","descr depto","local de trabalho","empresa",
+                        "grupo pgto","pcd","cod. unidade negócio","e-mail","telefone","superior imediato",
+                        "data/hora","usuário","id banco","id agencia","nº da conta","dígito controle",
+                        "estado","concatenar","gênero","tamanho camisa","kit"
+                    ]:
+                        if val and str(val).isdigit() and int(val) > 0:
+                            itens_kit[col] = int(val)
+
+                novo_kit = Kit(
+                    id_kit=gerar_id(Kit),
+                    nome_kit=nome_kit,
+                    itens_kit=itens_kit
+                )
+                kits.append(asdict(novo_kit))
+                write_csv(Kit, kits)
+                id_kit = novo_kit.id_kit
+                criados_kits += 1
+                log_action(usuario_exec, {
+                    "acao": "REGISTRAR_KIT_AUTO",
+                    "linha_antes": None,
+                    "linha_depois": asdict(novo_kit)
+                })
+        novo_colaborador = Colaborador(
+            id_colaborador=gerar_id(Colaborador),
+            nome_colaborador=row.get("nome", ""),
+            email_colaborador=row.get("e-mail", ""),
+            id_gestor=id_gestor,
+            nome_gestor=nome_gestor,
+            email_gestor=email_gestor,
+            id_kit=id_kit,
+            nome_kit=nome_kit,
+            data_admissao=row.get("data adimissão", ""),
+            tamanho_camisa=row.get("tamanho camisa", ""),
+            id_agencia=row.get("local de trabalho", ""),
+            cidade_envio=row.get("local de trabalho", ""),
+            uf_envio=row.get("estado", ""),
+            situacao="montar",
+            id_registro=row.get("id", ""),
+            cargo=row.get("cargo", "")
+        )
+        novos_colaboradores.append(asdict(novo_colaborador))
+    write_csv(Colaborador, novos_colaboradores)
+    for c in novos_colaboradores:
+        log_action(usuario_exec, {
+            "acao": "IMPORTAR_COLABORADOR",
+            "linha_antes": None,
+            "linha_depois": c
+        })
+
+
 # ---------------- CRUD ---------------- #
 
 def verificar_campos(modelo: Type, dados: dict) -> bool:

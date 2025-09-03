@@ -1,0 +1,19 @@
+﻿id_colaborador,nome_colaborador,email_colaborador,id_gestor,nome_gestor,email_gestor,id_kit,nome_kit,data_admissao,tamanho_camisa,id_agencia,cidade_envio,uf_envio,situacao,id_registro,cargo
+C001,Carlos Lima,carlos.lima@safra.com.br,U002,Roberto Santos,roberto.santos@safra.com.br,K001,safrapay,2023-06-20,P,A038,BELO HORIZONTE,MG,entregue,000001,Analista
+C002,Daniela Pereira,daniela.pereira@safra.com.br,U002,Roberto Santos,roberto.santos@safra.com.br,K001,safrapay,2023-06-20,G,A024,CURITIBA,PR,entregue,000002,Gerente
+C003,Eduardo Alves,eduardo.alves@safra.com.br,U002,Roberto Santos,roberto.santos@safra.com.br,K001,safrapay,2022-11-30,GG,A030,PORTO ALEGRE,RS,montar,000003,Analista
+C004,Fernanda Costa,fernanda.costa@safra.com.br,U002,Roberto Santos,roberto.santos@safra.com.br,K002,financeira,2023-01-25,P,A004,MACEIÓ,AL,montar,000004,Assistente
+C005,Gustavo Rocha,gustavo.rocha@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-10-12,M,A012,RECIFE,PE,montar,000005,Analista
+C006,Helena Martins,helena.martins@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2023-04-05,G,A010,SALVADOR,BA,enviado,000006,Coordenador
+C007,Igor Oliveira,igor.oliveira@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-09-08,GG,A014,BRASÍLIA,DF,montar,000007,Especialista
+C008,Juliana Dias,juliana.dias@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2023-02-28,P,A009,MANAUS,AM,montar,000008,Analista
+C009,Kleber Fernandes,kleber.fernandes@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K001,safrapay,2022-08-19,M,A051,SÃO PAULO,SP,enviado,000009,Gerente
+C010,Larissa Santos,larissa.santos@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2023-05-10,G,A039,RIO DE JANEIRO,RJ,entregue,000010,Analista
+C011,Marcos Vieira,marcos.vieira@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K001,safrapay,2023-07-14,P,A038,BELO HORIZONTE,MG,montar,000011,Assistente
+C012,Nathalia Moreira,nathalia.moreira@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-07-22,GG,A024,CURITIBA,PR,entregue,000012,Coordenador
+C013,Otávio Ribeiro,otávio.ribeiro@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K001,safrapay,2023-03-30,M,A030,PORTO ALEGRE,RS,montar,000013,Analista
+C014,Patrícia Gomes,patricia.gomes@safra.com.br,U003,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-06-16,G,A004,MACEIÓ,AL,enviado,000014,Especialista
+C015,Quintino Souza,quintino.souza@safra.com.br,U004,Rogério Silva,rogerio.silva@safra.com.br,K001,safrapay,2023-01-01,P,A012,RECIFE,PE,entregue,000015,Gerente
+C016,Renata Lima,renata.lima@safra.com.br,U004,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-05-27,GG,A010,SALVADOR,BA,montar,000016,Analista
+C017,Samuel Castro,samuel.castro@safra.com.br,U004,Rogério Silva,rogerio.silva@safra.com.br,K001,safrapay,2023-02-15,M,A014,BRASÍLIA,DF,montar,000017,Assistente
+C018,Tatiana Rocha,tatiana.rocha@safra.com.br,U004,Rogério Silva,rogerio.silva@safra.com.br,K002,financeira,2022-04-10,G,A009,MANAUS,AM,enviado,000018,Coordenador

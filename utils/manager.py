@@ -22,6 +22,7 @@ MODEL_FILE_MAP = {
     Colaborador: "colaboradores.csv",
 }
 
+
 # ---------------- PREFIXOS DE ID ---------------- #
 
 MODEL_ID_PREFIX = {
@@ -31,6 +32,7 @@ MODEL_ID_PREFIX = {
     Kit: "K",
     Usuario: "U",
 }
+
 
 # ---------------- AUXILIARES ---------------- #
 
@@ -65,7 +67,13 @@ def dicts_to_objects(data: List[dict], modelo: Type):
 
 
 def objects_to_dicts(objs: List):
-    return [asdict(o) for o in objs]
+    dicts = []
+    for o in objs:
+        d = asdict(o)
+        if "qntd" in d and d["qntd"] is not None:
+            d["qntd"] = str(d["qntd"])
+        dicts.append(d)
+    return dicts
 
 
 def get_file_for_model(modelo: Type) -> str:
@@ -104,7 +112,6 @@ def validar_relacionamentos(novo_registro, modelo):
         kits = read_csv(Kit)
         if not any(k["id_kit"] == novo_registro.id_kit for k in kits):
             raise ValueError(f"Kit {novo_registro.id_kit} não existe em kits")
-
 
 
 # ---------------- DEBUG ---------------- #
@@ -182,42 +189,89 @@ def alterar_estoque(id_kit: str, item_nome: str, tamanho: str, quantidade: int):
 
 
 def ajustar_estoque_para_kit(id_kit: str, tamanho_camisa: str, delta: int):
-    dados = read_csv(EstoqueItem)
-    for item in dados:
-        if item["id_kit"] == id_kit:
-            nome_item = item["item"].lower()
-            tamanho_item = item.get("tamanho_camisa", "").upper()
-            qntd = int(item["qntd"])
-            if "camisa" in nome_item and tamanho_item == tamanho_camisa.upper():
-                novo_qntd = qntd + delta * 3
-            elif "camisa" not in nome_item:
-                novo_qntd = qntd + delta * 1
+    itens_kit = [row for row in read_csv(Kit) if row["id_kit"] == id_kit]
+    dados_estoque = read_csv(EstoqueItem)
+    selecionados = []
+    for k in itens_kit:
+        nome_item = (k.get("item") or "").lower()
+        tam_kit = (k.get("tamanho_camisa") or "").upper()
+        if "camisa" in nome_item:
+            if tamanho_camisa and tam_kit == (tamanho_camisa or "").upper():
+                selecionados.append(k)
+        else:
+            selecionados.append(k)
+    for k in selecionados:
+        nome_item = (k.get("item") or "")
+        tam_kit = (k.get("tamanho_camisa") or "").upper()
+        req = int(k.get("qntd") or 0)
+        alvo = None
+        for e in dados_estoque:
+            mesmo_kit = e.get("id_kit") == id_kit
+            mesmo_item = (e.get("item") or "").lower() == nome_item.lower()
+            if "camisa" in nome_item.lower():
+                mesmo_tam = (e.get("tamanho_camisa") or "").upper() == tam_kit
             else:
-                continue
-            if novo_qntd < 0:
-                raise ValueError(f"Estoque insuficiente para item {item['item']} ({tamanho_item})")
-            item["qntd"] = str(novo_qntd)
-    write_csv(EstoqueItem, dados)
+                mesmo_tam = True
+            if mesmo_kit and mesmo_item and mesmo_tam:
+                alvo = e
+                break
+        if not alvo:
+            raise ValueError(f"Item '{nome_item}' (tam {tam_kit or 'NA'}) não encontrado no estoque para o kit {id_kit}")
+        atual = int(alvo.get("qntd") or 0)
+        novo = atual + delta * req
+        if novo < 0:
+            raise ValueError(f"Estoque insuficiente para item '{nome_item}' (tam {tam_kit or 'NA'})")
+    for k in selecionados:
+        nome_item = (k.get("item") or "")
+        tam_kit = (k.get("tamanho_camisa") or "").upper()
+        req = int(k.get("qntd") or 0)
+        for e in dados_estoque:
+            mesmo_kit = e.get("id_kit") == id_kit
+            mesmo_item = (e.get("item") or "").lower() == nome_item.lower()
+            if "camisa" in nome_item.lower():
+                mesmo_tam = (e.get("tamanho_camisa") or "").upper() == tam_kit
+            else:
+                mesmo_tam = True
+            if mesmo_kit and mesmo_item and mesmo_tam:
+                atual = int(e.get("qntd") or 0)
+                e["qntd"] = str(atual + delta * req)
+                break
+    write_csv(EstoqueItem, dados_estoque)
 
 
 def validar_estoque_para_kit(id_kit: str, tamanho_camisa: str) -> bool:
-    dados = read_csv(EstoqueItem)
-    itens_do_kit = [item for item in dados if item["id_kit"] == id_kit]
-    
-    camisa_ok = False
-    outros_ok = True
-
-    for item in itens_do_kit:
-        qntd = int(item["qntd"])
-        nome_item = item["item"].lower()
-        tamanho_item = item.get("tamanho_camisa", "").upper()
-
-        if "camisa" in nome_item and tamanho_item == tamanho_camisa.upper():
-            camisa_ok = qntd >= 3
-        elif "camisa" not in nome_item and qntd < 1:
-            outros_ok = False
-
-    return camisa_ok and outros_ok
+    itens_kit = [row for row in read_csv(Kit) if row["id_kit"] == id_kit]
+    dados_estoque = read_csv(EstoqueItem)
+    checagens = []
+    for k in itens_kit:
+        nome_item = (k.get("item") or "")
+        tam_kit = (k.get("tamanho_camisa") or "").upper()
+        req = int(k.get("qntd") or 0)
+        if req <= 0:
+            continue
+        if "camisa" in nome_item.lower():
+            if tamanho_camisa and tam_kit == (tamanho_camisa or "").upper():
+                checagens.append((nome_item, tam_kit, req))
+        else:
+            checagens.append((nome_item, None, req))
+    for (nome_item, tam, req) in checagens:
+        alvo = None
+        for e in dados_estoque:
+            if e.get("id_kit") != id_kit:
+                continue
+            if (e.get("item") or "").lower() != nome_item.lower():
+                continue
+            if tam:
+                if (e.get("tamanho_camisa") or "").upper() != tam:
+                    continue
+            alvo = e
+            break
+        if not alvo:
+            return False
+        disponivel = int(alvo.get("qntd") or 0)
+        if disponivel < req:
+            return False
+    return True
 
 
 # ---------------- CRUD ---------------- #
@@ -238,6 +292,20 @@ def adicionar_registro(novo_registro, modelo: Type):
     setattr(novo_registro, chave_id, gerar_id(modelo))
     validar_relacionamentos(novo_registro, modelo)
     if modelo == Colaborador:
+        usuarios = read_csv(Usuario)
+        gestor = next((u for u in usuarios if u["id_usuario"] == novo_registro.id_gestor), None)
+        if gestor:
+            novo_registro.nome_gestor = gestor["nome"]
+            novo_registro.email_gestor = gestor["email"]
+        kits = read_csv(Kit)
+        kit = next((k for k in kits if k["id_kit"] == novo_registro.id_kit), None)
+        if kit:
+            novo_registro.nome_kit = kit["nome_kit"]
+        agencias = read_csv(Agencia)
+        agencia = next((a for a in agencias if a["id_agencia"] == novo_registro.id_agencia), None)
+        if agencia:
+            novo_registro.cidade_envio = agencia["cidade_envio"]
+            novo_registro.uf_envio = agencia["uf_envio"]
         id_kit = novo_registro.id_kit
         tamanho_camisa = novo_registro.tamanho_camisa
         if not validar_estoque_para_kit(id_kit, tamanho_camisa):

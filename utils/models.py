@@ -15,6 +15,7 @@ class Kit:
     id_item: str = ""
     item: str = ""
     tamanho_camisa: Optional[str] = None
+    qntd: int = 0
 
 @dataclass
 class EstoqueItem:
@@ -51,3 +52,5 @@ class Colaborador:
     cidade_envio : str = ""
     uf_envio : str = ""
     situacao : str = ""
+    id_registro : str = ""
+    cargo : str = ""

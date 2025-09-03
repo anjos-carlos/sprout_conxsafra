@@ -1,0 +1,6 @@
+﻿id_usuario,usuario,senha,nome,email,id_classe,nome_classe
+U001,carlos.anjos,senha123,Carlos Anjos,carlos.anjos@safra.com.br,1,Administrador
+U002,roberto.santos,senha123,Roberto Santos,roberto.santos@safra.com.br,2,Gestor
+U003,rogerio.silva,senha123,Rogério Silva,rogerio.silva@safra.com.br,2,Gestor
+U004,estela.argolo,senha123,Estela Argolo,estela.argolo@safra.com.br,1,Administrador
+U005,joao.argolo,senha123,João Argolo,joao.argolo@safra.com.br,3,Almoxarifado
